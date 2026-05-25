@@ -7,6 +7,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IFXAdapter} from "../src/interfaces/IFXAdapter.sol";
 import {IFxEscrow} from "../src/interfaces/IFxEscrow.sol";
 import {FxEscrowAdapter} from "../src/FxEscrowAdapter.sol";
+import {MockFxEscrow} from "../src/MockFxEscrow.sol";
 
 contract MockUSDC is ERC20 {
     constructor() ERC20("USD Coin", "USDC") {}
@@ -19,35 +20,9 @@ contract MockBRLA is ERC20 {
     function mint(address to, uint256 amount) external { _mint(to, amount); }
 }
 
-/// @dev Stand-in for Circle's FxEscrow. Implements `fillQuote` by performing
-///      the atomic PvP transfer that the real escrow would. No signature
-///      checking — this mock is solely a stand-in for adapter testing; the
-///      adapter's pre-call quote validation is what we're exercising.
-contract MockFxEscrow is IFxEscrow {
-    using SafeTransferLib for ERC20;
-
-    error QuoteExpired();
-    error MakerInsufficientApproval();
-
-    function fillQuote(Quote calldata q, bytes calldata /* makerSig */)
-        external
-        returns (uint256 amountOut)
-    {
-        if (block.timestamp >= q.expiry) revert QuoteExpired();
-        // Pull tokenIn from taker (this == msg.sender from the adapter's POV).
-        ERC20(q.tokenIn).transferFrom(msg.sender, q.maker, q.amountIn);
-        // Pull tokenOut from maker → taker (msg.sender). Real escrow uses Permit2
-        // here; the mock just relies on a regular allowance from maker to escrow.
-        ERC20(q.tokenOut).transferFrom(q.maker, msg.sender, q.amountOut);
-        amountOut = q.amountOut;
-    }
-}
-
-/// @dev Trivial copy of OZ's SafeTransferLib trimmed for this file.
-library SafeTransferLib {
-    error TransferFailed();
-}
-
+/// @dev Maker is funded with BRLA and approves the escrow in setUp(); the
+///      adapter pulls USDC from the test "router" and the escrow handles the
+///      atomic PvP transfer.
 contract FxEscrowAdapterTest is Test {
     FxEscrowAdapter public adapter;
     MockFxEscrow public escrow;

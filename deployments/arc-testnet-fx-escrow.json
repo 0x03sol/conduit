@@ -1,0 +1,19 @@
+{
+  "chainId": 5042002,
+  "deployedAt": 1779718478,
+  "deployer": "0x27f8c09a134037380a0164797e54f9B32B9fC6e2",
+  "usdc": "0x3600000000000000000000000000000000000000",
+  "registrationFee": 1000000,
+  "fx": {
+    "ticker": "EURC",
+    "token": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    "adapterKind": "FxEscrowAdapter",
+    "maker": "0x27f8c09a134037380a0164797e54f9B32B9fC6e2"
+  },
+  "contracts": {
+    "MockFxEscrow": "0x5ACcc61A1a7A458666dFBa56b8fC1bAc6Dee1E69",
+    "FxEscrowAdapter": "0xF8935eB02aCB9c51128A1C92D5942fA35dB1F8e5",
+    "BatchRegistry": "0x2CBa24070eEd0378c5a080Fe3BF059A96FeC81eE",
+    "BatchRouter": "0x488b7E6f53AaabB45f3498143BF314052788dE5F"
+  }
+}
