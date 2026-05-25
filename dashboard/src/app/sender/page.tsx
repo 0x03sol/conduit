@@ -72,7 +72,6 @@ export default function SenderPage() {
     const onArc = chainId === arcTestnet.id;
 
     const [rows, setRows] = useState<ParsedRow[]>([]);
-    const [filename, setFilename] = useState<string | null>(null);
 
     const valid = rows.filter((r) => !r.error);
     const totalsByCurrency = useMemo(() => {
@@ -106,7 +105,6 @@ export default function SenderPage() {
     function onFile(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (!file) return;
-        setFilename(file.name);
         file.text().then((text) => setRows(parseCsv(text)));
     }
 
@@ -172,12 +170,11 @@ export default function SenderPage() {
                         className="block file:mr-3 file:px-3 file:py-1.5 file:rounded file:border-0 file:bg-ink file:text-paper file:text-sm"
                     />
                 </label>
-                {filename && <p className="text-xs text-ink-soft">loaded: {filename}</p>}
             </div>
 
             {rows.length > 0 && (
-                <div className="rounded-md border border-border overflow-hidden">
-                    <table className="w-full text-sm tabular">
+                <div className="rounded-md border border-border overflow-x-auto">
+                    <table className="w-full min-w-[560px] text-sm tabular">
                         <thead className="bg-paper-soft text-xs text-ink-soft/80">
                             <tr>
                                 <th className="text-left px-4 py-2 font-normal">wallet</th>

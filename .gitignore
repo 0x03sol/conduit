@@ -57,3 +57,12 @@ relayer/drizzle/
 # ===== Generated artifacts kept under version control =====
 # (whitelist below if needed)
 # !deployments/*.json
+
+# Ponder runtime state (embedded pglite db, build cache)
+indexer/.ponder/
+indexer/.next-env.d.ts
+
+# Python venv for the bug-hunt playwright runner
+.venv-pw/
+.venv/
+__pycache__/

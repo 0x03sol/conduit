@@ -20,9 +20,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body className="font-sans min-h-screen flex flex-col">
                 <Providers>
                     <header className="border-b border-border bg-paper">
-                        <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between">
-                            <Link href="/" className="font-mono text-sm">conduit/</Link>
-                            <nav className="flex items-center gap-6 text-sm">
+                        <div className="mx-auto max-w-6xl px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+                            <Link
+                                href="/"
+                                className="font-mono text-sm whitespace-nowrap shrink-0"
+                            >
+                                conduit/
+                            </Link>
+                            <nav className="flex items-center gap-3 sm:gap-6 text-sm whitespace-nowrap">
                                 <Link href="/sender" className="hover:text-signal">Sender</Link>
                                 <Link href="/operator" className="hover:text-signal">Operator</Link>
                                 <Link href="/recipient" className="hover:text-signal">Recipient</Link>

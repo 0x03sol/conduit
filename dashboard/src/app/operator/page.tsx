@@ -65,8 +65,8 @@ export default function OperatorPage() {
 
             {error && <div className="text-sm text-red-700">indexer unreachable: {error}</div>}
 
-            <div className="rounded-md border border-border overflow-hidden">
-                <table className="w-full text-sm tabular">
+            <div className="rounded-md border border-border overflow-x-auto">
+                <table className="w-full min-w-[760px] text-sm tabular">
                     <thead className="bg-paper-soft text-xs text-ink-soft/80">
                         <tr>
                             <th className="text-left px-4 py-2 font-normal">batchId</th>

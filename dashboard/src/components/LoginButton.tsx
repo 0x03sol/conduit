@@ -34,7 +34,7 @@ export function LoginButton() {
         return (
             <button
                 onClick={login}
-                className="px-3 py-1.5 text-sm bg-ink text-paper rounded hover:bg-ink-soft"
+                className="px-3 py-1.5 text-sm bg-ink text-paper rounded hover:bg-ink-soft whitespace-nowrap"
             >
                 Sign in
             </button>
@@ -46,9 +46,9 @@ export function LoginButton() {
         (address ? shortenHex(address) : user?.wallet?.address ? shortenHex(user.wallet.address) : "Account");
 
     return (
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm whitespace-nowrap">
             <span className="font-mono">{label}</span>
-            <button onClick={logout} className="px-2 py-1 text-xs border border-border rounded hover:border-signal">
+            <button onClick={logout} className="px-2 py-1 text-xs border border-border rounded hover:border-signal whitespace-nowrap">
                 Sign out
             </button>
         </div>

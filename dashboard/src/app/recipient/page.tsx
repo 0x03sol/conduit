@@ -91,8 +91,8 @@ export default function RecipientPage() {
             ) : items.length === 0 && activeWallet ? (
                 <p className="text-sm text-ink-soft">no payments found</p>
             ) : items.length > 0 ? (
-                <div className="rounded-md border border-border overflow-hidden">
-                    <table className="w-full text-sm tabular">
+                <div className="rounded-md border border-border overflow-x-auto">
+                    <table className="w-full min-w-[680px] text-sm tabular">
                         <thead className="bg-paper-soft text-xs text-ink-soft/80">
                             <tr>
                                 <th className="text-left px-4 py-2 font-normal">batch</th>
