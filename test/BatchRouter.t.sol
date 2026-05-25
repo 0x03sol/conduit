@@ -75,7 +75,7 @@ contract BatchRouterTest is Test {
         vm.prank(owner);
         registry = new BatchRegistry(address(usdc), FEE);
 
-        router = new BatchRouter(address(registry), address(usdc));
+        router = new BatchRouter(address(registry), address(usdc), bytes32(0), address(0), address(0));
 
         vm.prank(owner);
         registry.setRouter(address(router));
@@ -120,12 +120,46 @@ contract BatchRouterTest is Test {
 
     function test_Constructor_RevertWhen_RegistryIsZero() public {
         vm.expectRevert(BatchRouter.ZeroAddress.selector);
-        new BatchRouter(address(0), address(usdc));
+        new BatchRouter(address(0), address(usdc), bytes32(0), address(0), address(0));
     }
 
     function test_Constructor_RevertWhen_USDCIsZero() public {
         vm.expectRevert(BatchRouter.ZeroAddress.selector);
-        new BatchRouter(address(registry), address(0));
+        new BatchRouter(address(registry), address(0), bytes32(0), address(0), address(0));
+    }
+
+    function test_Constructor_FXDisabled_StoresZeroes() public view {
+        // The shared `router` in setUp() is FX-disabled; verify storage.
+        assertEq(router.fxTicker(), bytes32(0));
+        assertEq(address(router.fxToken()), address(0));
+        assertEq(address(router.fxAdapter()), address(0));
+    }
+
+    function test_Constructor_RevertWhen_FXTickerIsUSDC() public {
+        // bytes32("USDC") is reserved for the native corridor.
+        vm.expectRevert(BatchRouter.InvalidCorridorConfig.selector);
+        new BatchRouter(address(registry), address(usdc), USDC_TICKER, address(usdc), makeAddr("adapter"));
+    }
+
+    function test_Constructor_RevertWhen_FXEnabledWithoutToken() public {
+        vm.expectRevert(BatchRouter.InvalidCorridorConfig.selector);
+        new BatchRouter(address(registry), address(usdc), BRLA, address(0), makeAddr("adapter"));
+    }
+
+    function test_Constructor_RevertWhen_FXEnabledWithoutAdapter() public {
+        vm.expectRevert(BatchRouter.InvalidCorridorConfig.selector);
+        new BatchRouter(address(registry), address(usdc), BRLA, makeAddr("brla"), address(0));
+    }
+
+    function test_Constructor_RevertWhen_FXDisabledButTokenProvided() public {
+        // Mismatched config: ticker zero but token non-zero.
+        vm.expectRevert(BatchRouter.InvalidCorridorConfig.selector);
+        new BatchRouter(address(registry), address(usdc), bytes32(0), makeAddr("brla"), address(0));
+    }
+
+    function test_Constructor_RevertWhen_FXDisabledButAdapterProvided() public {
+        vm.expectRevert(BatchRouter.InvalidCorridorConfig.selector);
+        new BatchRouter(address(registry), address(usdc), bytes32(0), address(0), makeAddr("adapter"));
     }
 
     // ========================================================================
@@ -135,14 +169,14 @@ contract BatchRouterTest is Test {
     function test_Execute_RevertWhen_BatchNotFound() public {
         vm.prank(sender);
         vm.expectRevert(BatchRouter.BatchNotFound.selector);
-        router.execute(bytes32(uint256(0xdead)), 1_000e6, 50);
+        router.execute(bytes32(uint256(0xdead)), 1_000e6, 50, "");
     }
 
     function test_Execute_RevertWhen_SlippageOver10000() public {
         (bytes32 batchId,) = _createUsdcBatch();
         vm.prank(sender);
         vm.expectRevert(BatchRouter.InvalidSlippage.selector);
-        router.execute(batchId, 1_000e6, 10_001);
+        router.execute(batchId, 1_000e6, 10_001, "");
     }
 
     function test_Execute_RevertWhen_InsufficientFunding() public {
@@ -151,11 +185,12 @@ contract BatchRouterTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(BatchRouter.InsufficientFunding.selector, totalNeeded - 1, totalNeeded)
         );
-        router.execute(batchId, totalNeeded - 1, 50);
+        router.execute(batchId, totalNeeded - 1, 50, "");
     }
 
-    function test_Execute_RevertWhen_RecipientCurrencyNotUSDC() public {
-        // Mixed-currency batch: one BRLA, two USDC. Week 1 router rejects.
+    function test_Execute_RevertWhen_RecipientCurrencyMixed() public {
+        // Mixed-currency batch: one BRLA, two USDC. Single-corridor v1
+        // requires every recipient share one ticker; mixed → revert.
         BatchRegistry.Recipient[] memory rs = new BatchRegistry.Recipient[](3);
         rs[0] = BatchRegistry.Recipient({wallet: alice, amount: 100e6, outputCurrency: USDC_TICKER});
         rs[1] = BatchRegistry.Recipient({wallet: bob, amount: 250e6, outputCurrency: BRLA});
@@ -165,8 +200,23 @@ contract BatchRouterTest is Test {
         bytes32 batchId = registry.createBatch(rs);
 
         vm.prank(sender);
+        vm.expectRevert(BatchRouter.MixedCorridorNotSupported.selector);
+        router.execute(batchId, 1_000e6, 50, "");
+    }
+
+    function test_Execute_RevertWhen_AllRecipientsUseUnknownTicker_AndFXDisabled() public {
+        // FX is disabled in this suite. A batch where every recipient targets
+        // a non-USDC ticker has no execution path → UnsupportedCurrency.
+        BatchRegistry.Recipient[] memory rs = new BatchRegistry.Recipient[](2);
+        rs[0] = BatchRegistry.Recipient({wallet: alice, amount: 100e6, outputCurrency: BRLA});
+        rs[1] = BatchRegistry.Recipient({wallet: bob, amount: 50e6, outputCurrency: BRLA});
+
+        vm.prank(sender);
+        bytes32 batchId = registry.createBatch(rs);
+
+        vm.prank(sender);
         vm.expectRevert(abi.encodeWithSelector(BatchRouter.UnsupportedCurrency.selector, BRLA));
-        router.execute(batchId, 1_000e6, 50);
+        router.execute(batchId, 1_000e6, 50, "");
     }
 
     function test_Execute_RevertWhen_RouterNotApproved() public {
@@ -178,13 +228,13 @@ contract BatchRouterTest is Test {
 
         vm.prank(sender);
         vm.expectRevert(); // OZ ERC20InsufficientAllowance
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
     }
 
     function test_Execute_RevertWhen_BatchAlreadySettled() public {
         (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
 
         // Second call must revert because status is now Settled.
         vm.prank(sender);
@@ -193,7 +243,7 @@ contract BatchRouterTest is Test {
                 BatchRouter.InvalidBatchStatus.selector, BatchRegistry.Status.Settled
             )
         );
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
     }
 
     // ========================================================================
@@ -206,7 +256,7 @@ contract BatchRouterTest is Test {
         uint256 senderBefore = usdc.balanceOf(sender);
 
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
 
         assertEq(usdc.balanceOf(alice), 100e6);
         assertEq(usdc.balanceOf(bob), 250e6);
@@ -218,7 +268,7 @@ contract BatchRouterTest is Test {
         (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
 
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
 
         BatchRegistry.Batch memory b = registry.getBatch(batchId);
         assertEq(uint8(b.status), uint8(BatchRegistry.Status.Settled));
@@ -227,7 +277,7 @@ contract BatchRouterTest is Test {
     function test_Execute_HappyPath_RouterHoldsZeroUSDCAfterSettlement() public {
         (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
 
         assertEq(usdc.balanceOf(address(router)), 0, "router must not retain USDC");
     }
@@ -239,7 +289,7 @@ contract BatchRouterTest is Test {
         uint256 senderBefore = usdc.balanceOf(sender);
 
         vm.prank(sender);
-        router.execute(batchId, overFund, 50);
+        router.execute(batchId, overFund, 50, "");
 
         assertEq(usdc.balanceOf(sender), senderBefore - totalNeeded, "sender net debit == totalNeeded");
         assertEq(usdc.balanceOf(address(router)), 0);
@@ -250,7 +300,7 @@ contract BatchRouterTest is Test {
         uint256 senderBefore = usdc.balanceOf(sender);
 
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
 
         assertEq(usdc.balanceOf(sender), senderBefore - totalNeeded);
     }
@@ -262,7 +312,7 @@ contract BatchRouterTest is Test {
         emit BatchSettled(batchId, totalNeeded, 3);
 
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
     }
 
     function test_Execute_HappyPath_EmitsStatusUpdates() public {
@@ -279,19 +329,19 @@ contract BatchRouterTest is Test {
         emit StatusUpdated(batchId, BatchRegistry.Status.Executing, BatchRegistry.Status.Settled);
 
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
     }
 
     function test_Execute_HappyPath_AcceptsZeroSlippage() public {
         (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 0);
+        router.execute(batchId, totalNeeded, 0, "");
     }
 
     function test_Execute_HappyPath_AcceptsMaxSlippage10000() public {
         (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 10_000);
+        router.execute(batchId, totalNeeded, 10_000, "");
     }
 
     // ========================================================================
@@ -304,7 +354,7 @@ contract BatchRouterTest is Test {
 
         vm.prank(owner);
         BatchRegistry bRegistry = new BatchRegistry(address(bUsdc), FEE);
-        BatchRouter bRouter = new BatchRouter(address(bRegistry), address(bUsdc));
+        BatchRouter bRouter = new BatchRouter(address(bRegistry), address(bUsdc), bytes32(0), address(0), address(0));
         vm.prank(owner);
         bRegistry.setRouter(address(bRouter));
 
@@ -330,7 +380,7 @@ contract BatchRouterTest is Test {
 
         vm.prank(sender);
         vm.expectRevert(); // raw "USDC: blocklisted" string from the mock
-        bRouter.execute(batchId, totalNeeded, 50);
+        bRouter.execute(batchId, totalNeeded, 50, "");
 
         // All balances unchanged: atomicity proof.
         assertEq(bUsdc.balanceOf(sender), senderBalBefore);
@@ -351,7 +401,7 @@ contract BatchRouterTest is Test {
         // First execute() succeeds; second on the same batch must fail.
         (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
 
         // Re-fund sender so allowance / balance are not the limiting factor.
         usdc.mint(sender, totalNeeded);
@@ -360,7 +410,7 @@ contract BatchRouterTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(BatchRouter.InvalidBatchStatus.selector, BatchRegistry.Status.Settled)
         );
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
     }
 
     // ========================================================================
@@ -398,7 +448,7 @@ contract BatchRouterTest is Test {
         }
 
         vm.prank(sender);
-        router.execute(batchId, totalNeeded, 50);
+        router.execute(batchId, totalNeeded, 50, "");
 
         for (uint256 i; i < nRecipients; ++i) {
             assertEq(usdc.balanceOf(wallets[i]), rs[i].amount, "recipient amount mismatch");

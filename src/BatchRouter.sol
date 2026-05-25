@@ -6,36 +6,42 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {BatchRegistry} from "./BatchRegistry.sol";
+import {IFXAdapter} from "./interfaces/IFXAdapter.sol";
 
 /// @title BatchRouter
-/// @notice Orchestrates atomic distribution for a registered batch. Pulls
-///         funding USDC from the caller, pushes per-recipient amounts in the
-///         target currency, and refunds any excess.
-/// @dev    Week 1 v1 ships **single-corridor (USDC -> USDC)** only. Every
-///         recipient's `outputCurrency` MUST equal `bytes32("USDC")`. The FX
-///         adapter for BRLA / EURC / etc. is wired in Week 2 (Phase 2.2).
+/// @notice Orchestrates atomic distribution for a registered batch.
+/// @dev    Per D-001 (memory.md), v1 supports a SINGLE FX corridor per router
+///         instance, hardcoded at constructor time. Two execution paths:
 ///
-///         Atomicity is enforced by Solidity's transaction semantics: any
-///         revert in the distribution loop unwinds all prior transfers and
-///         registry status writes (audit C6/F6 CEI).
+///         (1) **USDC corridor** — every recipient has
+///             `outputCurrency == bytes32("USDC")`. Router pulls funding,
+///             distributes USDC directly, refunds excess to caller. Same as
+///             Phase 1 behavior.
 ///
-///         Re-entry into `execute(batchId)` is prevented by two layers:
-///           1. The registry's `Status.Pending -> Funded -> Executing -> Settled`
-///              guard (`solidity-defi-patterns` Pattern 5). A second call on the
-///              same batch reverts with `InvalidBatchStatus`.
-///           2. OZ `ReentrancyGuard` on `execute()` (defence in depth).
+///         (2) **FX corridor** — every recipient has
+///             `outputCurrency == fxTicker` (set at construction). Router
+///             pulls funding USDC, calls `fxAdapter.swap(fundedAmount,
+///             address(fxToken), totalNeeded, fxExtraData)`, asserts the
+///             received amount equals `totalNeeded` exactly, then distributes
+///             `fxToken` to recipients. The caller MUST size `fundedAmount`
+///             so the swap output matches `totalNeeded`.
 ///
-///         Excess funding is refunded to `msg.sender` (Q-005 in memory.md
-///         deliberately defers CCTP-friendly refund routing to Week 3).
+///         Mixed corridors (some recipients USDC + some FX in the same batch)
+///         revert with `MixedCorridorNotSupported`. Multi-currency batches
+///         are deferred to v2.
+///
+///         Setting `fxTicker = bytes32(0)` at construction disables the FX
+///         path (Phase 1 deploys used this).
+///
+///         Reentrancy: two layers — OZ `ReentrancyGuard` on `execute` plus
+///         the registry's `Pending → Funded → Executing → Settled` status
+///         guard (`solidity-defi-patterns` Pattern 5).
 contract BatchRouter is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // ───────────────────────── Constants ─────────────────────────
 
-    /// @notice Sentinel for the only currency supported in v1 Week 1.
     bytes32 internal constant USDC_TICKER = bytes32("USDC");
-
-    /// @notice Slippage cap, in basis points (100% = 10_000 bps).
     uint16 internal constant MAX_SLIPPAGE_BPS = 10_000;
 
     // ───────────────────────── Immutables ─────────────────────────
@@ -43,45 +49,85 @@ contract BatchRouter is ReentrancyGuard {
     BatchRegistry public immutable registry;
     IERC20 public immutable usdc;
 
+    /// @notice The single FX corridor served by this router. `bytes32(0)` means
+    ///         FX is disabled and only the USDC corridor is supported.
+    bytes32 public immutable fxTicker;
+    /// @notice ERC-20 corresponding to `fxTicker`. `address(0)` iff FX disabled.
+    IERC20 public immutable fxToken;
+    /// @notice Swap engine used for the FX leg. `address(0)` iff FX disabled.
+    IFXAdapter public immutable fxAdapter;
+
     // ───────────────────────── Events ─────────────────────────
 
-    /// @notice Emitted once a batch is fully distributed and Settled.
-    /// @param batchId          Registry-assigned bytes32 identifier.
-    /// @param totalDistributed Sum of amounts pushed to recipients (in USDC base units).
-    /// @param recipientCount   Number of recipients in the batch.
     event BatchSettled(bytes32 indexed batchId, uint256 totalDistributed, uint256 recipientCount);
 
     // ───────────────────────── Errors ─────────────────────────
 
     error ZeroAddress();
+    error InvalidCorridorConfig();
     error BatchNotFound();
     error InvalidBatchStatus(BatchRegistry.Status status);
     error InvalidSlippage();
     error InsufficientFunding(uint256 provided, uint256 required);
     error UnsupportedCurrency(bytes32 currency);
+    error MixedCorridorNotSupported();
+    error FXAmountMismatch(uint256 received, uint256 needed);
 
     // ───────────────────────── Constructor ─────────────────────────
 
-    constructor(address _registry, address _usdc) {
+    /// @param _registry  BatchRegistry to read from + state-machine into.
+    /// @param _usdc      USDC (Arc native gas token in production).
+    /// @param _fxTicker  Currency ticker for the FX corridor (e.g. `bytes32("BRLA")`).
+    ///                   Pass `bytes32(0)` to disable FX entirely.
+    /// @param _fxToken   ERC-20 corresponding to `_fxTicker`. Required iff FX enabled.
+    /// @param _fxAdapter IFXAdapter implementation. Required iff FX enabled.
+    constructor(
+        address _registry,
+        address _usdc,
+        bytes32 _fxTicker,
+        address _fxToken,
+        address _fxAdapter
+    ) {
         if (_registry == address(0) || _usdc == address(0)) revert ZeroAddress();
+
+        if (_fxTicker == USDC_TICKER) revert InvalidCorridorConfig();
+
+        if (_fxTicker != bytes32(0)) {
+            // FX enabled: must supply both token and adapter.
+            if (_fxToken == address(0) || _fxAdapter == address(0)) {
+                revert InvalidCorridorConfig();
+            }
+        } else {
+            // FX disabled: must NOT supply token or adapter.
+            if (_fxToken != address(0) || _fxAdapter != address(0)) {
+                revert InvalidCorridorConfig();
+            }
+        }
+
         registry = BatchRegistry(_registry);
         usdc = IERC20(_usdc);
+        fxTicker = _fxTicker;
+        fxToken = IERC20(_fxToken);
+        fxAdapter = IFXAdapter(_fxAdapter);
     }
 
     // ───────────────────────── Core ─────────────────────────
 
-    /// @notice Atomically distribute `fundedAmount` of USDC to all recipients
-    ///         of `batchId`, refunding any excess to `msg.sender`.
-    /// @param  batchId         The registry batch identifier.
-    /// @param  fundedAmount    USDC the caller commits to the batch. Must be
-    ///                         >= sum of recipient amounts. Caller must have
-    ///                         pre-approved this contract for `fundedAmount`.
-    /// @param  maxSlippageBps  FX slippage cap in basis points (0..10_000).
-    ///                         Currently only validated; consumed by Week 2 FX leg.
+    /// @notice Atomically distribute a batch.
+    /// @param batchId         Registry batch ID.
+    /// @param fundedAmount    USDC the caller commits. Caller must have
+    ///                        pre-approved this contract.
+    /// @param maxSlippageBps  Slippage cap in bps (0..10_000). Currently
+    ///                        validated only; reserved for future use.
+    /// @param fxExtraData     Adapter-specific payload for the FX leg
+    ///                        (encoded `(IFxEscrow.Quote, makerSig)` for
+    ///                        `FxEscrowAdapter`; ignored by `MockFxAdapter`).
+    ///                        MUST be empty for USDC corridor.
     function execute(
         bytes32 batchId,
         uint256 fundedAmount,
-        uint16 maxSlippageBps
+        uint16 maxSlippageBps,
+        bytes calldata fxExtraData
     ) external nonReentrant {
         // ── Checks ──
         if (maxSlippageBps > MAX_SLIPPAGE_BPS) revert InvalidSlippage();
@@ -93,44 +139,79 @@ contract BatchRouter is ReentrancyGuard {
         BatchRegistry.Recipient[] memory rs = registry.getRecipients(batchId);
         uint256 n = rs.length;
 
-        // Validate every recipient targets USDC (Week 1 single corridor).
-        for (uint256 i; i < n;) {
-            if (rs[i].outputCurrency != USDC_TICKER) {
-                revert UnsupportedCurrency(rs[i].outputCurrency);
-            }
+        // Determine corridor. Single-currency-per-batch invariant.
+        bytes32 ticker = rs[0].outputCurrency;
+        for (uint256 i = 1; i < n;) {
+            if (rs[i].outputCurrency != ticker) revert MixedCorridorNotSupported();
             unchecked {
                 ++i;
             }
         }
 
-        uint256 totalNeeded = b.totalAmountSum;
-        if (fundedAmount < totalNeeded) revert InsufficientFunding(fundedAmount, totalNeeded);
+        bool isFX;
+        if (ticker == USDC_TICKER) {
+            isFX = false;
+        } else if (ticker == fxTicker && address(fxAdapter) != address(0)) {
+            isFX = true;
+        } else {
+            revert UnsupportedCurrency(ticker);
+        }
 
-        // ── Effects (advance state machine before any value movement) ──
+        uint256 totalNeeded = b.totalAmountSum;
+
+        // For the USDC path, fundedAmount and totalNeeded are in the same units.
+        // For the FX path they are not (USDC vs fxToken), so the comparison is
+        // moved to the post-swap invariant inside the FX block.
+        if (!isFX && fundedAmount < totalNeeded) {
+            revert InsufficientFunding(fundedAmount, totalNeeded);
+        }
+
+        // ── Effects ──
         registry.markFunded(batchId);
         registry.markExecuting(batchId);
 
         // ── Interactions ──
-        // Pull funding from caller. SafeERC20 handles weird-ERC20 cases.
         usdc.safeTransferFrom(msg.sender, address(this), fundedAmount);
 
-        // Distribute. Any revert here unwinds everything (atomicity).
-        for (uint256 i; i < n;) {
-            usdc.safeTransfer(rs[i].wallet, rs[i].amount);
+        if (isFX) {
+            // Swap USDC -> fxToken via the adapter.
+            usdc.forceApprove(address(fxAdapter), fundedAmount);
+            uint256 received = fxAdapter.swap(
+                fundedAmount,
+                address(fxToken),
+                totalNeeded,
+                fxExtraData
+            );
+            usdc.forceApprove(address(fxAdapter), 0);
+
+            // Tight invariant for v1: caller MUST size the quote so received
+            // matches the recipients' total exactly. Over- or under-delivery
+            // is a misconfigured batch.
+            if (received != totalNeeded) revert FXAmountMismatch(received, totalNeeded);
+
+            for (uint256 i; i < n;) {
+                fxToken.safeTransfer(rs[i].wallet, rs[i].amount);
+                unchecked {
+                    ++i;
+                }
+            }
+            // No USDC excess refund: all `fundedAmount` went into the swap.
+        } else {
+            // USDC corridor (Phase 1 behavior, unchanged).
+            for (uint256 i; i < n;) {
+                usdc.safeTransfer(rs[i].wallet, rs[i].amount);
+                unchecked {
+                    ++i;
+                }
+            }
             unchecked {
-                ++i;
+                uint256 leftover = fundedAmount - totalNeeded;
+                if (leftover > 0) {
+                    usdc.safeTransfer(msg.sender, leftover);
+                }
             }
         }
 
-        // Refund any excess to caller.
-        unchecked {
-            uint256 leftover = fundedAmount - totalNeeded;
-            if (leftover > 0) {
-                usdc.safeTransfer(msg.sender, leftover);
-            }
-        }
-
-        // Final status write + event.
         registry.markSettled(batchId);
         emit BatchSettled(batchId, totalNeeded, n);
     }

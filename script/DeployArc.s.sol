@@ -68,7 +68,13 @@ contract DeployArc is Script {
         vm.startBroadcast();
 
         BatchRegistry registry = new BatchRegistry(ARC_USDC, registrationFee);
-        BatchRouter router = new BatchRouter(address(registry), ARC_USDC);
+        BatchRouter router = new BatchRouter(
+            address(registry),
+            ARC_USDC,
+            bytes32(0),    // fxTicker = 0 disables FX corridor
+            address(0),    // fxToken
+            address(0)     // fxAdapter
+        );
         registry.setRouter(address(router));
 
         vm.stopBroadcast();
