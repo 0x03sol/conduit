@@ -1,0 +1,26 @@
+{
+  "name": "@conduit/indexer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Conduit Ponder indexer — BatchCreated / BatchSettled / StatusUpdated.",
+  "type": "module",
+  "scripts": {
+    "dev": "ponder dev",
+    "start": "ponder start",
+    "serve": "ponder serve",
+    "typecheck": "tsc --noEmit",
+    "codegen": "ponder codegen"
+  },
+  "dependencies": {
+    "ponder": "^0.8.18",
+    "viem": "^2.21.55",
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,329 @@
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+scalar BigInt
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type Meta {
+  status: JSON
+}
+
+type Query {
+  batch(id: String!): batch
+  batchs(where: batchFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): batchPage!
+  recipient(id: String!): recipient
+  recipients(where: recipientFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): recipientPage!
+  statusUpdate(id: String!): statusUpdate
+  statusUpdates(where: statusUpdateFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): statusUpdatePage!
+  _meta: Meta
+}
+
+type batch {
+  id: String!
+  sender: String!
+  totalAmountSum: BigInt!
+  recipientCount: Int!
+  status: Int!
+  registrationFee: BigInt
+  createdBlock: BigInt!
+  createdAt: BigInt!
+  createdTxHash: String!
+  settledBlock: BigInt
+  settledAt: BigInt
+  settledTxHash: String
+  totalDistributed: BigInt
+  recipients(where: recipientFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): recipientPage
+  statusHistory(where: statusUpdateFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): statusUpdatePage
+}
+
+type recipientPage {
+  items: [recipient!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type recipient {
+  id: String!
+  batchId: String!
+  index: Int!
+  wallet: String!
+  amount: BigInt!
+  outputCurrency: String!
+  batch: batch
+}
+
+input recipientFilter {
+  AND: [recipientFilter]
+  OR: [recipientFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  batchId: String
+  batchId_not: String
+  batchId_in: [String]
+  batchId_not_in: [String]
+  batchId_contains: String
+  batchId_not_contains: String
+  batchId_starts_with: String
+  batchId_ends_with: String
+  batchId_not_starts_with: String
+  batchId_not_ends_with: String
+  index: Int
+  index_not: Int
+  index_in: [Int]
+  index_not_in: [Int]
+  index_gt: Int
+  index_lt: Int
+  index_gte: Int
+  index_lte: Int
+  wallet: String
+  wallet_not: String
+  wallet_in: [String]
+  wallet_not_in: [String]
+  wallet_contains: String
+  wallet_not_contains: String
+  wallet_starts_with: String
+  wallet_ends_with: String
+  wallet_not_starts_with: String
+  wallet_not_ends_with: String
+  amount: BigInt
+  amount_not: BigInt
+  amount_in: [BigInt]
+  amount_not_in: [BigInt]
+  amount_gt: BigInt
+  amount_lt: BigInt
+  amount_gte: BigInt
+  amount_lte: BigInt
+  outputCurrency: String
+  outputCurrency_not: String
+  outputCurrency_in: [String]
+  outputCurrency_not_in: [String]
+  outputCurrency_contains: String
+  outputCurrency_not_contains: String
+  outputCurrency_starts_with: String
+  outputCurrency_ends_with: String
+  outputCurrency_not_starts_with: String
+  outputCurrency_not_ends_with: String
+}
+
+type statusUpdatePage {
+  items: [statusUpdate!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type statusUpdate {
+  id: String!
+  batchId: String!
+  oldStatus: Int!
+  newStatus: Int!
+  block: BigInt!
+  timestamp: BigInt!
+  txHash: String!
+  batch: batch
+}
+
+input statusUpdateFilter {
+  AND: [statusUpdateFilter]
+  OR: [statusUpdateFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  batchId: String
+  batchId_not: String
+  batchId_in: [String]
+  batchId_not_in: [String]
+  batchId_contains: String
+  batchId_not_contains: String
+  batchId_starts_with: String
+  batchId_ends_with: String
+  batchId_not_starts_with: String
+  batchId_not_ends_with: String
+  oldStatus: Int
+  oldStatus_not: Int
+  oldStatus_in: [Int]
+  oldStatus_not_in: [Int]
+  oldStatus_gt: Int
+  oldStatus_lt: Int
+  oldStatus_gte: Int
+  oldStatus_lte: Int
+  newStatus: Int
+  newStatus_not: Int
+  newStatus_in: [Int]
+  newStatus_not_in: [Int]
+  newStatus_gt: Int
+  newStatus_lt: Int
+  newStatus_gte: Int
+  newStatus_lte: Int
+  block: BigInt
+  block_not: BigInt
+  block_in: [BigInt]
+  block_not_in: [BigInt]
+  block_gt: BigInt
+  block_lt: BigInt
+  block_gte: BigInt
+  block_lte: BigInt
+  timestamp: BigInt
+  timestamp_not: BigInt
+  timestamp_in: [BigInt]
+  timestamp_not_in: [BigInt]
+  timestamp_gt: BigInt
+  timestamp_lt: BigInt
+  timestamp_gte: BigInt
+  timestamp_lte: BigInt
+  txHash: String
+  txHash_not: String
+  txHash_in: [String]
+  txHash_not_in: [String]
+  txHash_contains: String
+  txHash_not_contains: String
+  txHash_starts_with: String
+  txHash_ends_with: String
+  txHash_not_starts_with: String
+  txHash_not_ends_with: String
+}
+
+type batchPage {
+  items: [batch!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input batchFilter {
+  AND: [batchFilter]
+  OR: [batchFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  sender: String
+  sender_not: String
+  sender_in: [String]
+  sender_not_in: [String]
+  sender_contains: String
+  sender_not_contains: String
+  sender_starts_with: String
+  sender_ends_with: String
+  sender_not_starts_with: String
+  sender_not_ends_with: String
+  totalAmountSum: BigInt
+  totalAmountSum_not: BigInt
+  totalAmountSum_in: [BigInt]
+  totalAmountSum_not_in: [BigInt]
+  totalAmountSum_gt: BigInt
+  totalAmountSum_lt: BigInt
+  totalAmountSum_gte: BigInt
+  totalAmountSum_lte: BigInt
+  recipientCount: Int
+  recipientCount_not: Int
+  recipientCount_in: [Int]
+  recipientCount_not_in: [Int]
+  recipientCount_gt: Int
+  recipientCount_lt: Int
+  recipientCount_gte: Int
+  recipientCount_lte: Int
+  status: Int
+  status_not: Int
+  status_in: [Int]
+  status_not_in: [Int]
+  status_gt: Int
+  status_lt: Int
+  status_gte: Int
+  status_lte: Int
+  registrationFee: BigInt
+  registrationFee_not: BigInt
+  registrationFee_in: [BigInt]
+  registrationFee_not_in: [BigInt]
+  registrationFee_gt: BigInt
+  registrationFee_lt: BigInt
+  registrationFee_gte: BigInt
+  registrationFee_lte: BigInt
+  createdBlock: BigInt
+  createdBlock_not: BigInt
+  createdBlock_in: [BigInt]
+  createdBlock_not_in: [BigInt]
+  createdBlock_gt: BigInt
+  createdBlock_lt: BigInt
+  createdBlock_gte: BigInt
+  createdBlock_lte: BigInt
+  createdAt: BigInt
+  createdAt_not: BigInt
+  createdAt_in: [BigInt]
+  createdAt_not_in: [BigInt]
+  createdAt_gt: BigInt
+  createdAt_lt: BigInt
+  createdAt_gte: BigInt
+  createdAt_lte: BigInt
+  createdTxHash: String
+  createdTxHash_not: String
+  createdTxHash_in: [String]
+  createdTxHash_not_in: [String]
+  createdTxHash_contains: String
+  createdTxHash_not_contains: String
+  createdTxHash_starts_with: String
+  createdTxHash_ends_with: String
+  createdTxHash_not_starts_with: String
+  createdTxHash_not_ends_with: String
+  settledBlock: BigInt
+  settledBlock_not: BigInt
+  settledBlock_in: [BigInt]
+  settledBlock_not_in: [BigInt]
+  settledBlock_gt: BigInt
+  settledBlock_lt: BigInt
+  settledBlock_gte: BigInt
+  settledBlock_lte: BigInt
+  settledAt: BigInt
+  settledAt_not: BigInt
+  settledAt_in: [BigInt]
+  settledAt_not_in: [BigInt]
+  settledAt_gt: BigInt
+  settledAt_lt: BigInt
+  settledAt_gte: BigInt
+  settledAt_lte: BigInt
+  settledTxHash: String
+  settledTxHash_not: String
+  settledTxHash_in: [String]
+  settledTxHash_not_in: [String]
+  settledTxHash_contains: String
+  settledTxHash_not_contains: String
+  settledTxHash_starts_with: String
+  settledTxHash_ends_with: String
+  settledTxHash_not_starts_with: String
+  settledTxHash_not_ends_with: String
+  totalDistributed: BigInt
+  totalDistributed_not: BigInt
+  totalDistributed_in: [BigInt]
+  totalDistributed_not_in: [BigInt]
+  totalDistributed_gt: BigInt
+  totalDistributed_lt: BigInt
+  totalDistributed_gte: BigInt
+  totalDistributed_lte: BigInt
+}

@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --color-paper: #fafafa;
+    --color-ink: #0a0a0a;
+}
+
+html, body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-feature-settings: "ss01", "cv11";
+}
+
+/* Tabular figures for any number-heavy table. */
+.tabular { font-variant-numeric: tabular-nums; }
