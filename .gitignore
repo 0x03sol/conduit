@@ -6,7 +6,10 @@ broadcast/
 # - re-include specific files via `!` if needed.
 
 # ===== Solidity / contracts dependencies =====
-lib/
+# Foundry installs deps under /lib at the repo root. Anchor with leading
+# slash so we DON'T accidentally ignore dashboard/src/lib/ (which holds the
+# real frontend library code).
+/lib/
 
 # ===== Node / pnpm =====
 node_modules/
