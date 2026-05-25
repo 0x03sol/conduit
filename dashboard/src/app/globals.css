@@ -1,17 +1,289 @@
+/* ================================================================
+ * Conduit dashboard — Windows 7 Aero
+ * Foundation: 7.css (MIT) for authentic component chrome.
+ * Adds: desktop wallpaper, taskbar, start orb, and Aero-specific
+ *       gradients that 7.css doesn't ship out of the box.
+ * Font:  Segoe UI system fallback (matches what 7.css uses).
+ * ================================================================ */
+
+@import "7.css/dist/7.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-    --color-paper: #fafafa;
-    --color-ink: #0a0a0a;
+    --w7-aero-bg-1: rgba(180, 215, 246, 0.55);
+    --w7-aero-bg-2: rgba(120, 175, 230, 0.65);
+    --w7-aero-bg-3: rgba(70, 130, 200, 0.85);
+    --w7-aero-stroke: rgba(255, 255, 255, 0.5);
+    --w7-aero-shadow: 0 0 18px rgba(0, 30, 80, 0.6);
+    --w7-orb-blue: #1f5fb6;
+    --w7-orb-blue-hi: #5fa3ff;
+    --w7-text: #000000;
 }
 
 html, body {
-    background: var(--color-paper);
-    color: var(--color-ink);
-    font-feature-settings: "ss01", "cv11";
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: "Segoe UI", "Selawik", "San Francisco", "Helvetica Neue",
+                 Helvetica, Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 12px;
+    color: var(--w7-text);
 }
 
-/* Tabular figures for any number-heavy table. */
-.tabular { font-variant-numeric: tabular-nums; }
+/* The desktop wallpaper — Win7 default-style blue Aurora gradient.
+   We layer multiple radial gradients to mimic the Aurora flow without
+   shipping a JPEG. */
+body {
+    background:
+        radial-gradient(ellipse at 30% 20%, rgba(80, 160, 240, 0.55) 0%, transparent 55%),
+        radial-gradient(ellipse at 75% 75%, rgba(20, 80, 160, 0.55) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 50%, rgba(50, 110, 200, 0.30) 0%, transparent 70%),
+        linear-gradient(180deg, #0a3d7a 0%, #0a2755 60%, #04143a 100%);
+    background-attachment: fixed;
+}
+
+/* ============== Taskbar ============== */
+.w7-taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    z-index: 9000;
+    display: flex;
+    align-items: stretch;
+    color: #ffffff;
+    user-select: none;
+
+    /* Aero glass: translucent blue with white sheen on top */
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, 0.30) 0%,
+            rgba(180, 215, 250, 0.18) 6%,
+            rgba(40, 80, 130, 0.55) 30%,
+            rgba(20, 50, 95, 0.75) 60%,
+            rgba(10, 30, 70, 0.92) 100%);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border-top: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 -1px 0 rgba(0, 0, 0, 0.4),
+        0 -10px 18px rgba(0, 0, 0, 0.25);
+}
+
+/* The Win7 Start orb — circular sphere with 4-color flag.
+   Drawn entirely with gradients + an inline SVG flag. */
+.w7-start-orb {
+    width: 44px;
+    height: 44px;
+    margin: -3px 4px -3px -3px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    background:
+        radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 35%),
+        radial-gradient(circle at 50% 50%, var(--w7-orb-blue-hi) 0%, var(--w7-orb-blue) 60%, #0d2e6a 100%);
+    box-shadow:
+        inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+        inset 0 2px 3px rgba(255, 255, 255, 0.4),
+        0 0 6px rgba(70, 150, 255, 0.6),
+        0 1px 3px rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: filter 150ms ease;
+}
+.w7-start-orb:hover { filter: brightness(1.15); }
+.w7-start-orb:active { filter: brightness(0.9); }
+
+/* Taskbar program button — pressed-glass tile with thin highlight when active */
+.w7-task-button {
+    height: 100%;
+    min-width: 38px;
+    max-width: 180px;
+    padding: 0 10px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 0;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.10) 0%,
+        rgba(255, 255, 255, 0.04) 50%,
+        rgba(0, 0, 0, 0.10) 100%);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+.w7-task-button:hover {
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.22) 0%,
+        rgba(180, 215, 250, 0.10) 50%,
+        rgba(255, 255, 255, 0.04) 100%);
+    border-color: rgba(120, 200, 255, 0.45);
+    box-shadow: inset 0 0 8px rgba(120, 200, 255, 0.3);
+}
+.w7-task-button.active {
+    background: linear-gradient(180deg,
+        rgba(140, 200, 255, 0.50) 0%,
+        rgba(80, 150, 220, 0.40) 30%,
+        rgba(40, 100, 180, 0.35) 70%,
+        rgba(80, 150, 220, 0.45) 100%);
+    border-color: rgba(170, 220, 255, 0.7);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+        inset 0 0 12px rgba(140, 210, 255, 0.5);
+}
+
+/* System tray — bordered box with clock + status icons */
+.w7-tray {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    color: #ffffff;
+    font-size: 11px;
+    border-left: 1px solid rgba(255, 255, 255, 0.20);
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(0, 0, 0, 0.10) 100%);
+}
+
+/* "Show desktop" sliver on the far right */
+.w7-show-desktop {
+    width: 8px;
+    height: 100%;
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0.10) 0%,
+        rgba(255, 255, 255, 0.20) 100%);
+    border-left: 1px solid rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+}
+.w7-show-desktop:hover {
+    background: linear-gradient(90deg,
+        rgba(180, 215, 250, 0.30) 0%,
+        rgba(255, 255, 255, 0.45) 100%);
+}
+
+/* ============== Desktop icons ============== */
+.w7-desktop-icon {
+    width: 80px;
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: default;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 12px;
+    text-align: center;
+    border-radius: 2px;
+}
+.w7-desktop-icon:hover { background: rgba(120, 180, 240, 0.18); border-color: rgba(170, 210, 250, 0.35); }
+.w7-desktop-icon.selected { background: rgba(80, 140, 220, 0.40); border-color: rgba(170, 210, 250, 0.7); }
+.w7-desktop-icon-label {
+    text-shadow:
+        1px 1px 1px rgba(0, 0, 0, 0.85),
+        -1px 0 1px rgba(0, 0, 0, 0.5),
+        0 1px 2px rgba(0, 0, 0, 0.5);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+/* ============== Start menu ============== */
+.w7-start-menu {
+    position: fixed;
+    bottom: 40px;
+    left: 0;
+    width: 360px;
+    height: 480px;
+    z-index: 9001;
+    display: flex;
+    flex-direction: column;
+    color: #000000;
+    font-size: 12px;
+    border-top-right-radius: 6px;
+    border: 1px solid rgba(0, 30, 80, 0.7);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, 0.92) 0%,
+            rgba(225, 235, 250, 0.92) 30%,
+            rgba(195, 215, 245, 0.92) 100%);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.4) inset,
+        0 8px 30px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+.w7-start-menu-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px 6px;
+    flex: 1;
+    overflow-y: auto;
+}
+.w7-start-menu-list button {
+    width: 100%;
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    font-size: 12px;
+    color: #000000;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 3px;
+}
+.w7-start-menu-list button:hover {
+    background: linear-gradient(180deg, #d2e2f8 0%, #a4c4ee 100%);
+    border-color: #6c9ad8;
+}
+.w7-start-menu-footer {
+    background: linear-gradient(180deg, #d8e6f8 0%, #a3bfe2 100%);
+    border-top: 1px solid rgba(0, 30, 80, 0.4);
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #000;
+}
+
+/* ============== Window helpers (extends 7.css) ============== */
+/* Use 7.css's .window, .glass, .active. Add a default cursor for the body
+   inside the draggable wrapper. */
+.w7-window-wrap {
+    /* No additional styling — 7.css does the work. */
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.w7-window-wrap > .window-body {
+    flex: 1;
+    overflow: auto;
+}
+
+/* Tabular figures everywhere we show numbers */
+.w7-tabular { font-variant-numeric: tabular-nums; }
+
+/* Mono text for hex strings */
+.w7-mono { font-family: "Consolas", "Lucida Console", "Courier New", monospace; }
