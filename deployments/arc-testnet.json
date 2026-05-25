@@ -1,0 +1,11 @@
+{
+  "chainId": 5042002,
+  "deployedAt": 1779715154,
+  "deployer": "0x27f8c09a134037380a0164797e54f9B32B9fC6e2",
+  "usdc": "0x3600000000000000000000000000000000000000",
+  "registrationFee": 1000000,
+  "contracts": {
+    "BatchRegistry": "0x4e0c594Dea6143EF30faC7f4dC285A99d2295787",
+    "BatchRouter": "0x7F1eE7ABaa65d2611b3fC2C26fC084Ed5EEC6f4B"
+  }
+}
