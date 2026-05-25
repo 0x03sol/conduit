@@ -1,0 +1,163 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.26;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+import {BatchRouter} from "./BatchRouter.sol";
+import {IMessageHandlerV2} from "./interfaces/IMessageHandlerV2.sol";
+
+/// @title CCTPHookReceiver
+/// @notice Cross-chain entry point for Conduit batches. CCTP V2's
+///         `MessageTransmitterV2.receiveMessage` mints the burned USDC to
+///         this contract first, then calls one of the two methods below.
+///         The hook decodes the batch reference, approves the `BatchRouter`
+///         for the freshly-minted USDC, and triggers atomic distribution.
+///
+///         hookData layout:
+///           abi.encode(bytes32 batchId, uint16 maxFxSlippageBps, bytes extraData)
+///         where `extraData` is the FX-leg payload passed through to the
+///         configured `IFXAdapter` (empty `0x` for the USDC corridor and
+///         for `MockFxAdapter`).
+///
+/// @dev    Security:
+///           1. `msg.sender == messageTransmitter` (gate).
+///           2. `trustedRemoteSenders[srcDomain] == sender` allowlist.
+///              Both checks together prevent any spoofed CCTP message from
+///              being processed (audit C7, F9).
+///           3. Funded amount = `usdc.balanceOf(this)` at hook time. The
+///              receiver MUST be empty between settlements; any residual
+///              from a previous USDC-corridor refund stays here until the
+///              owner sweeps. The `sweep()` admin function drains it.
+///           4. `forceApprove(router, x)` then reset to 0 around
+///              `router.execute` (audit C27 weird-ERC20 defence).
+///           5. `nonReentrant` on the hook entry — defence-in-depth on top
+///              of CCTP's per-nonce dedup.
+///
+/// @dev    Q-005 (memory.md) is still open: refund destination for the
+///         USDC corridor's excess. Today the excess accumulates here and
+///         the owner sweeps it. A follow-up could refund-back-via-CCTP,
+///         pay-out-to-batch-sender, etc.
+contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    // ───────────────────────── Immutables ─────────────────────────
+
+    address public immutable messageTransmitter;
+    IERC20 public immutable usdc;
+    BatchRouter public immutable router;
+    address public owner;
+
+    // ───────────────────────── Storage ─────────────────────────
+
+    /// @notice Per-source-domain trusted sender allowlist. Sender is
+    ///         expected to be the source-chain `TokenMessengerV2` or our
+    ///         own contract; in either case its bytes32-padded address.
+    mapping(uint32 => bytes32) public trustedRemoteSenders;
+
+    // ───────────────────────── Events ─────────────────────────
+
+    event TrustedRemoteSenderSet(uint32 indexed srcDomain, bytes32 indexed sender);
+    event Swept(address indexed token, address indexed to, uint256 amount);
+    event MessageHandled(
+        uint32 indexed sourceDomain,
+        bytes32 indexed sender,
+        bytes32 indexed batchId,
+        uint256 fundedAmount
+    );
+
+    // ───────────────────────── Errors ─────────────────────────
+
+    error ZeroAddress();
+    error NotOwner();
+    error NotMessageTransmitter();
+    error UntrustedRemoteSender(uint32 srcDomain, bytes32 sender);
+    error NoFunding();
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert NotOwner();
+        _;
+    }
+
+    // ───────────────────────── Constructor ─────────────────────────
+
+    constructor(address _messageTransmitter, address _usdc, address _router) {
+        if (_messageTransmitter == address(0) || _usdc == address(0) || _router == address(0)) {
+            revert ZeroAddress();
+        }
+        messageTransmitter = _messageTransmitter;
+        usdc = IERC20(_usdc);
+        router = BatchRouter(_router);
+        owner = msg.sender;
+    }
+
+    // ───────────────────────── Admin ─────────────────────────
+
+    /// @notice Allowlist a remote (source domain, sender) pair. Pass
+    ///         `bytes32(0)` for `sender` to revoke a previously-set entry.
+    function setTrustedRemoteSender(uint32 srcDomain, bytes32 sender) external onlyOwner {
+        trustedRemoteSenders[srcDomain] = sender;
+        emit TrustedRemoteSenderSet(srcDomain, sender);
+    }
+
+    /// @notice Sweep residual tokens (typically USDC refund from the USDC
+    ///         corridor) to a designated address.
+    function sweep(address token, address to, uint256 amount) external onlyOwner {
+        IERC20(token).safeTransfer(to, amount);
+        emit Swept(token, to, amount);
+    }
+
+    // ───────────────────────── IMessageHandlerV2 ─────────────────────────
+
+    /// @inheritdoc IMessageHandlerV2
+    function handleReceiveFinalizedMessage(
+        uint32 sourceDomain,
+        bytes32 sender,
+        uint32 /* finalityThresholdExecuted */,
+        bytes calldata messageBody
+    ) external nonReentrant returns (bool) {
+        return _handle(sourceDomain, sender, messageBody);
+    }
+
+    /// @inheritdoc IMessageHandlerV2
+    function handleReceiveUnfinalizedMessage(
+        uint32 sourceDomain,
+        bytes32 sender,
+        uint32 /* finalityThresholdExecuted */,
+        bytes calldata messageBody
+    ) external nonReentrant returns (bool) {
+        return _handle(sourceDomain, sender, messageBody);
+    }
+
+    // ───────────────────────── Internal ─────────────────────────
+
+    function _handle(uint32 sourceDomain, bytes32 sender, bytes calldata messageBody)
+        internal
+        returns (bool)
+    {
+        // ── Auth ──
+        if (msg.sender != messageTransmitter) revert NotMessageTransmitter();
+        bytes32 expected = trustedRemoteSenders[sourceDomain];
+        if (expected == bytes32(0) || expected != sender) {
+            revert UntrustedRemoteSender(sourceDomain, sender);
+        }
+
+        // ── Decode ──
+        // Reverts (panic 0x12 / 0x32) on malformed input; that's acceptable.
+        (bytes32 batchId, uint16 maxFxSlippageBps, bytes memory extraData) =
+            abi.decode(messageBody, (bytes32, uint16, bytes));
+
+        // ── Funding source: whatever USDC is on this contract right now. ──
+        uint256 fundedAmount = usdc.balanceOf(address(this));
+        if (fundedAmount == 0) revert NoFunding();
+
+        // ── Hand off to the router. CEI: state isn't mutated locally. ──
+        usdc.forceApprove(address(router), fundedAmount);
+        router.execute(batchId, fundedAmount, maxFxSlippageBps, extraData);
+        usdc.forceApprove(address(router), 0);
+
+        emit MessageHandled(sourceDomain, sender, batchId, fundedAmount);
+        return true;
+    }
+}
