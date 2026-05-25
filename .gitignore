@@ -44,6 +44,10 @@ pnpm-debug.log*
 # ===== Skill source clones (when present) =====
 /tmp/skill-sources/
 
+# ===== Relayer runtime artifacts =====
+relayer/data/
+relayer/drizzle/
+
 # ===== Skills.sh agent aliases =====
 # .kiro/skills/ is the canonical location and is committed.
 # .agents/skills/ is a per-agent copy created by `npx skills add --copy`.
