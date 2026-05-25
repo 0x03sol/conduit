@@ -324,6 +324,80 @@ contract CCTPHookReceiverTest is Test {
     }
 
     // ========================================================================
+    // processHook (manual dispatch — used after CCTP V2 token mint)
+    // ========================================================================
+
+    function test_ProcessHook_HappyPath_DistributesAndEmits() public {
+        (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
+        usdc.mint(address(receiver), totalNeeded);
+
+        // No prank — anyone can call processHook (open by design).
+        vm.expectEmit(true, false, false, true, address(receiver));
+        emit HookProcessed(batchId, totalNeeded);
+
+        bool ok = receiver.processHook(_hookData(batchId));
+        assertTrue(ok);
+
+        assertEq(usdc.balanceOf(alice), 100e6);
+        assertEq(usdc.balanceOf(bob), 50e6);
+        assertEq(usdc.balanceOf(address(receiver)), 0);
+    }
+
+    function test_ProcessHook_RevertWhen_NoFunding() public {
+        (bytes32 batchId,) = _createUsdcBatch();
+        vm.expectRevert(CCTPHookReceiver.NoFunding.selector);
+        receiver.processHook(_hookData(batchId));
+    }
+
+    function test_ProcessBurnMessage_HappyPath_StripsHeaderAndDispatches() public {
+        (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
+        usdc.mint(address(receiver), totalNeeded);
+
+        // Construct a fake BurnMessageV2: 228 bytes of header (any content)
+        // followed by our hookData. The receiver only uses the suffix.
+        bytes memory header = new bytes(228);
+        bytes memory tail = _hookData(batchId);
+        bytes memory full = bytes.concat(header, tail);
+
+        bool ok = receiver.processBurnMessage(full);
+        assertTrue(ok);
+        assertEq(usdc.balanceOf(alice), 100e6);
+        assertEq(usdc.balanceOf(bob), 50e6);
+    }
+
+    function test_ProcessBurnMessage_RevertWhen_TooShort() public {
+        bytes memory tooShort = new bytes(100); // < 228
+        vm.expectRevert(CCTPHookReceiver.MalformedBurnMessage.selector);
+        receiver.processBurnMessage(tooShort);
+    }
+
+    function test_ProcessCCTPMessage_HappyPath_StripsBothHeadersAndDispatches() public {
+        // Full Iris message = 148 byte CCTP V2 header + 228 byte BurnMessageV2 header + hookData.
+        (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
+        usdc.mint(address(receiver), totalNeeded);
+
+        bytes memory cctpHeader = new bytes(148);
+        bytes memory burnHeader = new bytes(228);
+        bytes memory hookData = _hookData(batchId);
+        bytes memory full = bytes.concat(cctpHeader, burnHeader, hookData);
+
+        bool ok = receiver.processCCTPMessage(full);
+        assertTrue(ok);
+        assertEq(usdc.balanceOf(alice), 100e6);
+        assertEq(usdc.balanceOf(bob), 50e6);
+    }
+
+    function test_ProcessCCTPMessage_RevertWhen_TooShort() public {
+        bytes memory tooShort = new bytes(300); // < 376
+        vm.expectRevert(CCTPHookReceiver.MalformedCCTPMessage.selector);
+        receiver.processCCTPMessage(tooShort);
+    }
+
+    // Re-declare events that the test file emits via vm.expectEmit.
+    // (Must match the contract's events one-for-one.)
+    event HookProcessed(bytes32 indexed batchId, uint256 fundedAmount);
+
+    // ========================================================================
     // sweep
     // ========================================================================
 

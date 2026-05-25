@@ -66,6 +66,7 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
         bytes32 indexed batchId,
         uint256 fundedAmount
     );
+    event HookProcessed(bytes32 indexed batchId, uint256 fundedAmount);
 
     // ───────────────────────── Errors ─────────────────────────
 
@@ -74,6 +75,8 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
     error NotMessageTransmitter();
     error UntrustedRemoteSender(uint32 srcDomain, bytes32 sender);
     error NoFunding();
+    error MalformedBurnMessage();
+    error MalformedCCTPMessage();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -130,7 +133,92 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
         return _handle(sourceDomain, sender, messageBody);
     }
 
+    // ─────────────────────── Manual hook trigger ─────────────────────────
+    //
+    // NOTE on CCTP V2 hook execution:
+    //
+    //   For TOKEN BURN messages (TokenMessengerV2.depositForBurnWithHook),
+    //   the destination MessageTransmitterV2 routes the message to
+    //   TokenMessengerV2 (registered as the handler), which mints USDC to
+    //   `mintRecipient` (= this contract) but does NOT execute the embedded
+    //   hookData. CCTP V2's design intentionally keeps hook execution out
+    //   of the core protocol (verified against Circle's reference contract
+    //   2026-05-25; see TokenMessengerV2._handleReceiveMessage).
+    //
+    //   Therefore, after `receiveMessage` lands USDC here, the integrator
+    //   (typically the relayer) calls `processHook(hookData)` to dispatch
+    //   the batch. The IMessageHandlerV2 methods above remain valid for
+    //   arbitrary `sendMessage` flows (no token), where CCTP DOES auto-call
+    //   the recipient.
+    //
+    //   Open security note: `processHook` is callable by anyone. The threat
+    //   is that an attacker registers a batch where they are the recipient
+    //   and then races to call `processHook` with that batchId after a
+    //   legitimate CCTP mint lands. Mitigation in v1: keep the receiver
+    //   single-tenant (one batch in flight at a time) and `sweep()` any
+    //   residual after settlement. v2 may bind a batch to a specific
+    //   (sourceDomain, messageSender) pair so only the legitimate burner
+    //   can trigger.
+
+    /// @notice Dispatch a previously-minted batch using the supplied hookData.
+    /// @dev    Use this AFTER `MessageTransmitterV2.receiveMessage` has
+    ///         minted USDC to this contract. The relayer (or any caller)
+    ///         passes the hookData payload that was embedded in the
+    ///         BurnMessageV2.
+    function processHook(bytes calldata hookData) external nonReentrant returns (bool) {
+        return _dispatch(hookData);
+    }
+
+    /// @notice Convenience: takes the raw BurnMessageV2 bytes (the messageBody
+    ///         passed to `IMessageHandlerV2.handleReceiveMessage`), extracts
+    ///         the hookData portion, and dispatches.
+    /// @dev    BurnMessageV2 layout (verified against Circle docs 2026-05-25):
+    ///           offset 0   uint32   version
+    ///           offset 4   bytes32  burnToken
+    ///           offset 36  bytes32  mintRecipient
+    ///           offset 68  uint256  amount
+    ///           offset 100 bytes32  messageSender
+    ///           offset 132 uint256  maxFee
+    ///           offset 164 uint256  feeExecuted
+    ///           offset 196 uint256  expirationBlock
+    ///           offset 228 bytes    hookData (dynamic)
+    ///         Use this when the caller has the inner BurnMessageV2 only
+    ///         (e.g. via `IMessageHandlerV2`'s `messageBody` parameter).
+    function processBurnMessage(bytes calldata burnMessage) external nonReentrant returns (bool) {
+        if (burnMessage.length < 228) revert MalformedBurnMessage();
+        return _dispatch(burnMessage[228:]);
+    }
+
+    /// @notice Convenience: takes the FULL CCTP V2 message (as returned by
+    ///         Iris in the `message` field), strips both the CCTP V2 header
+    ///         (148 bytes) AND the BurnMessageV2 header (228 bytes), then
+    ///         dispatches the hookData.
+    /// @dev    CCTP V2 message layout = 148-byte header + messageBody.
+    ///         For token burns, messageBody = BurnMessageV2 (228 + hookData).
+    ///         So the hookData starts at offset 148 + 228 = 376.
+    ///         Use this when the relayer has the raw `message` from Iris and
+    ///         wants a one-call dispatch.
+    function processCCTPMessage(bytes calldata cctpMessage) external nonReentrant returns (bool) {
+        if (cctpMessage.length < 376) revert MalformedCCTPMessage();
+        return _dispatch(cctpMessage[376:]);
+    }
+
     // ───────────────────────── Internal ─────────────────────────
+
+    function _dispatch(bytes calldata hookData) internal returns (bool) {
+        (bytes32 batchId, uint16 maxFxSlippageBps, bytes memory extraData) =
+            abi.decode(hookData, (bytes32, uint16, bytes));
+
+        uint256 fundedAmount = usdc.balanceOf(address(this));
+        if (fundedAmount == 0) revert NoFunding();
+
+        usdc.forceApprove(address(router), fundedAmount);
+        router.execute(batchId, fundedAmount, maxFxSlippageBps, extraData);
+        usdc.forceApprove(address(router), 0);
+
+        emit HookProcessed(batchId, fundedAmount);
+        return true;
+    }
 
     function _handle(uint32 sourceDomain, bytes32 sender, bytes calldata messageBody)
         internal
