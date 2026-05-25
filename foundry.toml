@@ -1,0 +1,68 @@
+# Conduit foundry.toml
+#
+# References:
+#   - .kiro/skills/arc-network-deployment/SKILL.md
+#   - .kiro/skills/multichain-foundry-deploy/SKILL.md
+#
+# Decisions captured in memory.md § D-004 (solc 0.8.26, via_ir, optimizer 1M).
+
+[profile.default]
+src              = "src"
+out              = "out"
+libs             = ["lib"]
+test             = "test"
+script           = "script"
+solc             = "0.8.26"
+optimizer        = true
+optimizer_runs   = 1_000_000
+via_ir           = true
+verbosity        = 2
+fs_permissions   = [
+  { access = "read-write", path = "./deployments" },
+  { access = "read",       path = "./out" },
+]
+remappings = [
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "permit2/=lib/permit2/src/",
+  "forge-std/=lib/forge-std/src/",
+]
+
+# CI profile: stricter, fail-fast.
+[profile.ci]
+verbosity      = 3
+fuzz           = { runs = 256 }
+invariant      = { runs = 64, depth = 64 }
+
+# Quick local profile: lower fuzz runs for fast feedback during TDD red→green loops.
+[profile.fast]
+optimizer      = false
+fuzz           = { runs = 32 }
+invariant      = { runs = 8, depth = 16 }
+
+# Deep / pre-deploy profile: heavy fuzz + invariant runs; use before deploys.
+[profile.deep]
+fuzz           = { runs = 5_000 }
+invariant      = { runs = 1_000, depth = 256 }
+
+[fuzz]
+runs           = 256
+
+[invariant]
+runs           = 64
+depth          = 64
+fail_on_revert = false
+
+# RPC endpoints. Use ${VAR} for env-driven values; literals for public ones.
+[rpc_endpoints]
+arc_testnet     = "https://rpc.testnet.arc.network"
+sepolia         = "${SEPOLIA_RPC_URL}"
+mainnet         = "${MAINNET_RPC_URL}"
+
+# Contract verification.
+# arcscan API support is unconfirmed — verify manually via the explorer UI if needed.
+# Etherscan keys are env-driven; absent keys make `forge verify-contract` print a warning, not fail.
+[etherscan]
+arc_testnet = { key = "${ARCSCAN_API_KEY}", url = "https://testnet.arcscan.app/api", chain = 5042002 }
+sepolia     = { key = "${ETHERSCAN_API_KEY}", chain = 11155111 }
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md

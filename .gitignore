@@ -1,0 +1,55 @@
+# ===== Foundry =====
+out/
+cache/
+broadcast/
+# Keep deployment artifacts (addresses) but not the full broadcast logs:
+# - re-include specific files via `!` if needed.
+
+# ===== Solidity / contracts dependencies =====
+lib/
+
+# ===== Node / pnpm =====
+node_modules/
+dist/
+.next/
+.turbo/
+.vercel/
+coverage/
+*.tsbuildinfo
+
+# ===== Env / secrets — NEVER commit =====
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# ===== Editors / OS =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+*.swp
+*~
+
+# ===== Logs =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ===== Skill source clones (when present) =====
+/tmp/skill-sources/
+
+# ===== Skills.sh agent aliases =====
+# .kiro/skills/ is the canonical location and is committed.
+# .agents/skills/ is a per-agent copy created by `npx skills add --copy`.
+# It can be reproduced any time via `npx skills experimental_sync`.
+.agents/skills/
+
+# ===== Generated artifacts kept under version control =====
+# (whitelist below if needed)
+# !deployments/*.json
