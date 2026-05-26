@@ -178,11 +178,16 @@ body {
 }
 
 /* ============== Desktop icons ============== */
+/* Strict transparency — NO border, NO shadow, NO outline in any state.
+   The only visible background appears on :hover (and selected) using the
+   Win7-authentic translucent blue tint. */
 .w7-desktop-icon {
     width: 80px;
-    background: transparent;
-    border: 1px solid transparent;
-    padding: 4px;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 5px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -194,8 +199,25 @@ body {
     text-align: center;
     border-radius: 2px;
 }
-.w7-desktop-icon:hover { background: rgba(120, 180, 240, 0.18); border-color: rgba(170, 210, 250, 0.35); }
-.w7-desktop-icon.selected { background: rgba(80, 140, 220, 0.40); border-color: rgba(170, 210, 250, 0.7); }
+.w7-desktop-icon:hover {
+    background: rgba(49, 106, 197, 0.25) !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+.w7-desktop-icon.selected {
+    background: rgba(49, 106, 197, 0.25) !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+.w7-desktop-icon:focus,
+.w7-desktop-icon:focus-visible,
+.w7-desktop-icon:active {
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
 .w7-desktop-icon-label {
     text-shadow:
         1px 1px 1px rgba(0, 0, 0, 0.85),
@@ -271,7 +293,6 @@ body {
 /* Use 7.css's .window, .glass, .active. Add a default cursor for the body
    inside the draggable wrapper. */
 .w7-window-wrap {
-    /* No additional styling — 7.css does the work. */
     width: 100%;
     height: 100%;
     display: flex;
@@ -282,8 +303,218 @@ body {
     overflow: auto;
 }
 
+/* Custom Windows 7 Aero Glass Window Shaders (Pixel-Accurate) */
+.w7-aero-window {
+    background: 
+        /* Layer 1: Diagonal gloss shine reflection */
+        linear-gradient(135deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0) 50.1%, rgba(255, 255, 255, 0) 100%),
+        /* Layer 2: White glass highlight reflection on top */
+        linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.12) 20%, rgba(255, 255, 255, 0) 50%),
+        /* Layer 3: Blue glass tint gradient (Active Aero) */
+        linear-gradient(180deg, rgba(175, 212, 248, 0.52) 0%, rgba(135, 182, 232, 0.38) 30%, rgba(110, 162, 218, 0.42) 60%, rgba(70, 122, 192, 0.58) 100%);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.60) !important;
+    border-top-color: rgba(255, 255, 255, 0.78) !important;
+    border-bottom-color: rgba(0, 20, 60, 0.38) !important;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 
+        /* Outer glass soft drop shadow */
+        0 8px 24px rgba(0, 15, 45, 0.52),
+        /* Active inner blue light glow */
+        inset 0 0 0 1px rgba(255, 255, 255, 0.38),
+        inset 0 1px 0 rgba(255, 255, 255, 0.68) !important;
+    padding: 7px 7px 7px 7px !important;
+    box-sizing: border-box;
+    transition: box-shadow 150ms ease, background 150ms ease;
+}
+
+/* Inactive window state */
+.w7-aero-window:not(.active) {
+    background: 
+        /* Layer 1: Diagonal gloss shine reflection (faded) */
+        linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0) 50.1%),
+        /* Layer 2: White glass highlight reflection (faded) */
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.05) 20%, rgba(255, 255, 255, 0) 50%),
+        /* Layer 3: Grey/neutral inactive tint */
+        linear-gradient(180deg, rgba(230, 235, 240, 0.32) 0%, rgba(210, 215, 220, 0.20) 30%, rgba(195, 200, 205, 0.22) 60%, rgba(175, 180, 185, 0.28) 100%) !important;
+    backdrop-filter: blur(14px) saturate(90%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(90%) !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    box-shadow: 
+        0 5px 15px rgba(0, 0, 0, 0.25),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Active window state drop shadow */
+.w7-aero-window.active {
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        inset 1px 0 0 rgba(255, 255, 255, 0.5),
+        inset -1px 0 0 rgba(255, 255, 255, 0.5),
+        0 10px 30px rgba(0, 40, 100, 0.50),
+        0 0 1px rgba(0, 30, 80, 0.5) !important;
+}
+
+/* Aero Titlebar text styling */
+.w7-aero-title-text {
+    font-family: "Segoe UI", sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    color: #000000;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.95), 0 0 5px rgba(255, 255, 255, 0.95);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-left: 2px;
+}
+.w7-aero-window:not(.active) .w7-aero-title-text {
+    color: rgba(0, 0, 0, 0.55);
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.75);
+}
+
+/* Win32 Content Area (inset border frame) */
+.w7-aero-client {
+    background: #ffffff;
+    border: 1px solid #9bbcd9;
+    box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.1);
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Window title bar controls overrides */
+.w7-aero-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-right: 2px;
+}
+.w7-aero-btn {
+    width: 28px !important;
+    height: 18px !important;
+    min-width: 28px !important;
+    border: 1px solid rgba(0, 15, 45, 0.45) !important;
+    border-radius: 3px !important;
+    position: relative !important;
+    cursor: default !important;
+    outline: none !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.4),
+        0 1px 1px rgba(0, 0, 0, 0.15) !important;
+    transition: filter 100ms linear;
+}
+
+/* Minimize icon helper */
+.w7-aero-btn-min::after {
+    content: "";
+    position: absolute;
+    bottom: 5px;
+    left: 9px;
+    width: 8px;
+    height: 2px;
+    background: #000000;
+}
+/* Maximize icon helper */
+.w7-aero-btn-max::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    width: 9px;
+    height: 7px;
+    border: 1px solid #000000;
+    border-top-width: 2px;
+}
+/* Close icon helper (X mark) */
+.w7-aero-btn-close::after {
+    content: "\2715";
+    font-family: "Segoe UI", sans-serif;
+    font-size: 10px;
+    font-weight: bold;
+    color: #444444;
+    position: absolute;
+    top: 1px;
+    left: 9px;
+}
+
+/* Minimize/Maximize Base State (Glossy sky blue-grey) */
+.w7-aero-btn-min,
+.w7-aero-btn-max {
+    background: 
+        linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.15) 45%, rgba(0, 0, 0, 0.05) 50%, rgba(255, 255, 255, 0.15) 100%),
+        linear-gradient(90deg, #d3e5f7 0%, #b2cef2 50%, #9cbce5 100%) !important;
+}
+.w7-aero-btn-min:hover,
+.w7-aero-btn-max:hover {
+    background: 
+        linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.25) 45%, rgba(0, 0, 0, 0.05) 50%, rgba(255, 255, 255, 0.25) 100%),
+        linear-gradient(90deg, #e3f1ff 0%, #c4ddff 50%, #abcbf5 100%) !important;
+    border-color: rgba(0, 30, 80, 0.6) !important;
+    box-shadow: 
+        0 0 5px rgba(120, 185, 255, 0.85),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Close Button - Signature high-contrast glossy red */
+.w7-aero-btn-close {
+    background: 
+        linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 45%, rgba(0, 0, 0, 0.05) 50%, rgba(255, 255, 255, 0.15) 100%),
+        linear-gradient(90deg, #f78d8d 0%, #f05c5c 50%, #d82b2b 100%) !important;
+    border-color: rgba(90, 10, 10, 0.7) !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 200, 200, 0.45),
+        0 1px 1px rgba(0, 0, 0, 0.2) !important;
+}
+.w7-aero-btn-close::after {
+    color: #ffffff !important;
+}
+.w7-aero-btn-close:hover {
+    background: 
+        linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 45%, rgba(0, 0, 0, 0.05) 50%, rgba(255, 255, 255, 0.2) 100%),
+        linear-gradient(90deg, #ff7a7a 0%, #ff4242 50%, #e61010 100%) !important;
+    border-color: rgba(70, 0, 0, 0.85) !important;
+    box-shadow: 
+        0 0 6px rgba(255, 60, 60, 0.85),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Translucent Blue Selection Box (Win7 authentic style) */
+.w7-desktop-icon.selected {
+    background: rgba(49, 106, 197, 0.25) !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
 /* Tabular figures everywhere we show numbers */
 .w7-tabular { font-variant-numeric: tabular-nums; }
 
 /* Mono text for hex strings */
 .w7-mono { font-family: "Consolas", "Lucida Console", "Courier New", monospace; }
+
+/* Start Menu Right Column link items */
+.w7-start-right-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 5px 6px;
+    color: #1e395b !important;
+    font-family: inherit;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    cursor: default;
+    text-align: left;
+    border-radius: 3px;
+    width: 100%;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+.w7-start-right-link:hover {
+    background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(180,215,255,0.2) 100%) !important;
+    border-color: rgba(108, 154, 216, 0.4) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5) !important;
+}
+
