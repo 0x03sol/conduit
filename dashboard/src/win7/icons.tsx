@@ -5,21 +5,22 @@
  */
 
 export const ICONS = {
-    myComputer: "my-computer",
-    sender:     "sender",       // exchange icon — represents cross-chain transfer
-    operator:   "operator",     // monitor — settlement feed
-    recipient:  "recipient",    // inbox — incoming payments
-    arcscan:    "internet-explorer",
-    readme:     "readme",       // document
-    recycleBin: "recycle-bin",
-    wallet:     "wallet",
-    home:       "home",
-    money:      "money",
-    mail:       "email",
-    letter:     "secured-letter",
-    folder:     "folder-invoices",
-    briefcase:  "briefcase",
-    mailbox:    "mailbox",
+    myComputer: "extracted/Shell32.dll/imageres_109",
+    sender:     "extracted/Standard Folders/imageres_166", // shared folder representing cross-chain transfer/sender
+    operator:   "extracted/Shell32.dll/shell32_16",       // display monitor representing settlement feed/operator
+    recipient:  "extracted/Standard Folders/imageres_9",   // inbox/mail representing incoming payments/recipient
+    arcscan:    "extracted/Internet Explorer/iexplore_32528", // native Internet Explorer
+    arcTv:      "extracted/Windows Media Player/player",     // classic WMP 12 stack icon
+    readme:     "extracted/Default Programs/notepad_2",    // native Notepad
+    recycleBin: "extracted/Shell32.dll/imageres_54",       // empty recycle bin
+    wallet:     "extracted/Action Center/Action Center_1", // security shield
+    home:       "extracted/Special Folders/imageres_123",  // user home
+    money:      "extracted/Standard Folders/imageres_77",  // finance cabinet/vault
+    mail:       "extracted/Standard Folders/imageres_9",   // mailbox folder
+    letter:     "extracted/Standard Folders/imageres_9",
+    folder:     "extracted/Standard Folders/imageres_3",   // standard glossy yellow folder
+    briefcase:  "extracted/Standard Folders/imageres_3",
+    mailbox:    "extracted/Standard Folders/imageres_9",
 } as const;
 
 export type IconKey = keyof typeof ICONS;

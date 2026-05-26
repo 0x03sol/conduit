@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useDesktop } from "./store";
 import { Win7Window } from "./Window";
@@ -8,6 +8,9 @@ import { DesktopIcon } from "./DesktopIcon";
 import { Taskbar } from "./Taskbar";
 import { StartMenu } from "./StartMenu";
 import { APPS, DESKTOP_ICON_ORDER } from "./apps/registry";
+import EarthBackground from "../components/EarthBackground";
+import { ArcReadout } from "../components/ArcReadout";
+import { OnboardingTour } from "../components/OnboardingTour";
 
 interface DesktopProps {
     autoOpen?: string;
@@ -17,6 +20,7 @@ export function Desktop({ autoOpen }: DesktopProps) {
     const windows = useDesktop((s) => s.windows);
     const closeStartMenu = useDesktop((s) => s.closeStartMenu);
     const openApp = useDesktop((s) => s.openApp);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
 
     useEffect(() => {
         if (autoOpen && APPS[autoOpen]) {
@@ -28,11 +32,23 @@ export function Desktop({ autoOpen }: DesktopProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [autoOpen]);
 
+    const handleBackgroundClick = () => {
+        closeStartMenu();
+        setSelectedId(null);
+    };
+
     return (
         <div
-            onClick={closeStartMenu}
-            style={{ position: "fixed", inset: 0, overflow: "hidden" }}
+            onClick={handleBackgroundClick}
+            style={{
+                position: "fixed",
+                inset: 0,
+                overflow: "hidden",
+            }}
         >
+            {/* Live 3D WebGL Earth screensaver background */}
+            <EarthBackground />
+
             {/* Desktop icons */}
             <div
                 style={{
@@ -52,11 +68,16 @@ export function Desktop({ autoOpen }: DesktopProps) {
                         <DesktopIcon
                             key={id}
                             icon={app.icon}
-                            label={app.title.replace(/\.exe$/, "")}
-                            onLaunch={() => openApp(id, {
-                                title: app.title,
-                                bounds: app.defaultSize,
-                            })}
+                            label={(app.iconLabel ?? app.title).replace(/\.exe$/, "")}
+                            selected={selectedId === id}
+                            onSelect={() => setSelectedId(id)}
+                            onLaunch={() => {
+                                setSelectedId(null);
+                                openApp(id, {
+                                    title: app.title,
+                                    bounds: app.defaultSize,
+                                });
+                            }}
                         />
                     );
                 })}
@@ -78,6 +99,8 @@ export function Desktop({ autoOpen }: DesktopProps) {
 
             <Taskbar />
             <StartMenu />
+            <ArcReadout />
+            <OnboardingTour />
         </div>
     );
 }

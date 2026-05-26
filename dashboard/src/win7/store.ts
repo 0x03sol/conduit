@@ -27,6 +27,8 @@ interface DesktopStore {
     activeId: string | null;
     topZ: number;
     startMenuOpen: boolean;
+    /** Deep-link target consumed by ArcscanApp on next open / focus. */
+    arcscanTargetUrl: string | null;
 
     openApp: (appId: string, opts?: { title?: string; bounds?: Partial<WindowBounds> }) => void;
     close: (id: string) => void;
@@ -37,6 +39,7 @@ interface DesktopStore {
     setBounds: (id: string, bounds: WindowBounds) => void;
     toggleStartMenu: () => void;
     closeStartMenu: () => void;
+    setArcscanTarget: (url: string | null) => void;
 }
 
 const CASCADE = 28;
@@ -50,6 +53,7 @@ export const useDesktop = create<DesktopStore>((set) => ({
     activeId: null,
     topZ: 100,
     startMenuOpen: false,
+    arcscanTargetUrl: null,
 
     openApp: (appId, opts) => {
         let opened = false;
@@ -150,4 +154,5 @@ export const useDesktop = create<DesktopStore>((set) => ({
 
     toggleStartMenu: () => set((s) => ({ startMenuOpen: !s.startMenuOpen })),
     closeStartMenu: () => set({ startMenuOpen: false }),
+    setArcscanTarget: (url) => set({ arcscanTargetUrl: url }),
 }));

@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import * as THREE from "three";
+
+import { MeteorShower } from "./MeteorShower";
 
 // Dynamically import react-globe.gl with SSR disabled
 const Globe = dynamic(() => import("react-globe.gl"), {
@@ -12,6 +15,7 @@ const Globe = dynamic(() => import("react-globe.gl"), {
 export default function EarthBackground() {
     const globeRef = useRef<any>(null);
     const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+    const sunLightAdded = useRef(false);
 
     useEffect(() => {
         // Set dimensions once we are client-side
@@ -44,6 +48,28 @@ export default function EarthBackground() {
             // so the limb (Earth's edge against space) is renderable. We then
             // crop with CSS positioning to show only the upper horizon arc.
             globeRef.current.pointOfView({ lat: 20, lng: 10, altitude: 1.8 });
+
+            // Custom lighting: dim ambient + bright directional "sun" from
+            // the bottom-right. Only attach once even if the effect re-fires.
+            if (!sunLightAdded.current) {
+                const scene = globeRef.current.scene();
+                if (scene) {
+                    // Dim the existing ambient light(s) to 0.3
+                    scene.traverse((obj: any) => {
+                        if (obj?.isAmbientLight) {
+                            obj.intensity = 0.3;
+                        }
+                    });
+
+                    // Add a strong sun directional light from the bottom-right
+                    const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+                    sunLight.position.set(2, -1, 1);
+                    sunLight.userData.isCustomSun = true;
+                    scene.add(sunLight);
+
+                    sunLightAdded.current = true;
+                }
+            }
         }
     }, [globeRef.current]);
 
@@ -65,30 +91,25 @@ export default function EarthBackground() {
                 pointerEvents: "none",
             }}
         >
-            {/* Static starfield + milky-way wash — pinpoint white dots
-                evoke the deep-space backdrop from the reference shot. */}
+            {/* Space background — warm nebula tint in the upper-right plus
+                the 300-dot starfield from /stars.svg.
+                Lifted above the globe canvas (z-index 2) because the globe's
+                atmosphere shader paints faint blue alpha across the upper
+                viewport which would otherwise mask the dim 1px stars.
+                Masked to the top 60% so stars don't sprinkle onto the Earth. */}
             <div
                 style={{
                     position: "absolute",
                     inset: 0,
-                    backgroundImage: [
-                        "radial-gradient(1px 1px at 12% 8%, rgba(255,255,255,0.85), transparent 50%)",
-                        "radial-gradient(1px 1px at 24% 22%, rgba(255,255,255,0.55), transparent 50%)",
-                        "radial-gradient(2px 2px at 38% 14%, rgba(255,255,255,0.95), transparent 50%)",
-                        "radial-gradient(1px 1px at 52% 6%, rgba(255,255,255,0.6), transparent 50%)",
-                        "radial-gradient(1px 1px at 62% 28%, rgba(255,255,255,0.75), transparent 50%)",
-                        "radial-gradient(2px 2px at 74% 12%, rgba(255,255,255,0.9), transparent 50%)",
-                        "radial-gradient(1px 1px at 84% 24%, rgba(255,255,255,0.55), transparent 50%)",
-                        "radial-gradient(1px 1px at 92% 8%, rgba(255,255,255,0.7), transparent 50%)",
-                        "radial-gradient(1px 1px at 6% 32%, rgba(255,255,255,0.5), transparent 50%)",
-                        "radial-gradient(1px 1px at 44% 36%, rgba(255,255,255,0.65), transparent 50%)",
-                        "radial-gradient(1px 1px at 68% 38%, rgba(255,255,255,0.5), transparent 50%)",
-                        "radial-gradient(1px 1px at 18% 44%, rgba(255,255,255,0.45), transparent 50%)",
-                        "radial-gradient(2px 2px at 88% 40%, rgba(255,255,255,0.85), transparent 50%)",
-                        "radial-gradient(ellipse 60% 25% at 55% 18%, rgba(140,110,160,0.10), transparent 70%)",
-                        "radial-gradient(ellipse 45% 18% at 30% 12%, rgba(120,140,180,0.08), transparent 70%)",
-                    ].join(","),
+                    background:
+                        "radial-gradient(ellipse at 60% 20%, rgba(80,40,10,0.3) 0%, transparent 60%), " +
+                        "url('/stars.svg')",
+                    backgroundSize: "auto, cover",
+                    backgroundRepeat: "no-repeat, no-repeat",
                     pointerEvents: "none",
+                    zIndex: 2,
+                    maskImage: "linear-gradient(to bottom, black 0%, black 55%, transparent 65%)",
+                    WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 55%, transparent 65%)",
                 }}
             />
 
@@ -118,10 +139,15 @@ export default function EarthBackground() {
                     nightImageUrl="/earth-night.jpg"
                     backgroundImageUrl="" // black space; stars are drawn above
                     showAtmosphere={true}
-                    atmosphereColor="rgb(120, 180, 255)"
-                    atmosphereAltitude={0.22}
+                    atmosphereColor="#3a8fff"
+                    atmosphereAltitude={0.18}
                 />
             </div>
+
+            {/* Live tx meteor shower — one streak per real Arc-testnet
+                transaction, masked above the horizon so it never paints
+                on the Earth surface. */}
+            <MeteorShower />
 
             {/* Brand overlay — clean white Arc arch (Λ) + "Arc" wordmark in
                 the black sky above the horizon. No spiral, no circle. */}
@@ -134,7 +160,7 @@ export default function EarthBackground() {
                     display: "flex",
                     alignItems: "center",
                     gap: "20px",
-                    zIndex: 2,
+                    zIndex: 4,
                     pointerEvents: "none",
                     userSelect: "none",
                 }}

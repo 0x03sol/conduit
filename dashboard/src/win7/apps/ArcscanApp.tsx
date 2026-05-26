@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { useDesktop } from "../store";
 import { Icon } from "../icons";
 
 const PRESETS = [
@@ -13,7 +14,19 @@ const PRESETS = [
 ];
 
 export function ArcscanApp() {
-    const [url, setUrl] = useState(PRESETS[0]!.href);
+    const arcscanTargetUrl = useDesktop((s) => s.arcscanTargetUrl);
+    const setArcscanTarget = useDesktop((s) => s.setArcscanTarget);
+    const [url, setUrl] = useState<string>(() => arcscanTargetUrl ?? PRESETS[0]!.href);
+
+    // When a meteor (or any other caller) sets a new deep-link target,
+    // sync it into the address bar and clear the store entry so we don't
+    // re-trigger on every focus.
+    useEffect(() => {
+        if (arcscanTargetUrl) {
+            setUrl(arcscanTargetUrl);
+            setArcscanTarget(null);
+        }
+    }, [arcscanTargetUrl, setArcscanTarget]);
 
     return (
         <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>

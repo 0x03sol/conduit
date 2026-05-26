@@ -51,43 +51,46 @@ export function Win7Window({ id, icon, children }: WindowProps) {
             onMouseDown={() => !isActive && focus(win.id)}
         >
             <div
-                className={`window glass ${isActive ? "active" : ""}`}
-                style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}
+                className={`w7-aero-window ${isActive ? "active" : ""}`}
+                style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", boxSizing: "border-box" }}
             >
                 <div
                     className="title-bar"
                     onDoubleClick={() => toggleMaximize(win.id)}
-                    style={{ display: "flex", alignItems: "center" }}
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        height: "22px",
+                        cursor: "default",
+                        userSelect: "none",
+                        padding: "0 2px",
+                        marginBottom: "4px"
+                    }}
                 >
-                    {icon && <Icon icon={icon} size={16} style={{ marginLeft: "4px", marginRight: "4px" }} />}
-                    <div className="title-bar-text" style={{ flex: 1 }}>{win.title}</div>
-                    <div className="title-bar-controls">
+                    {icon && <Icon icon={icon} size={16} style={{ marginRight: "4px" }} />}
+                    <div className="w7-aero-title-text" style={{ flex: 1 }}>{win.title}</div>
+                    <div className="w7-aero-controls">
                         <button
                             type="button"
-                            aria-label="Minimize"
+                            className="w7-aero-btn w7-aero-btn-min"
                             onClick={(e) => { e.stopPropagation(); minimize(win.id); }}
+                            aria-label="Minimize"
                         />
                         <button
                             type="button"
-                            aria-label={win.maximized ? "Restore" : "Maximize"}
+                            className="w7-aero-btn w7-aero-btn-max"
                             onClick={(e) => { e.stopPropagation(); toggleMaximize(win.id); }}
+                            aria-label={win.maximized ? "Restore" : "Maximize"}
                         />
                         <button
                             type="button"
-                            aria-label="Close"
+                            className="w7-aero-btn w7-aero-btn-close"
                             onClick={(e) => { e.stopPropagation(); close(win.id); }}
+                            aria-label="Close"
                         />
                     </div>
                 </div>
-                <div
-                    className="window-body has-space"
-                    style={{
-                        flex: 1,
-                        overflow: "auto",
-                        margin: 0,
-                        background: "rgba(255, 255, 255, 0.92)",
-                    }}
-                >
+                <div className="w7-aero-client">
                     {children}
                 </div>
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useDesktop } from "./store";
-import { Win7Flag } from "./Win7Flag";
+import { ArcLogo } from "./ArcLogo";
 import { SystemTray } from "./SystemTray";
 import { APPS } from "./apps/registry";
 import { Icon } from "./icons";
@@ -16,7 +16,7 @@ export function Taskbar() {
     const toggleStart = useDesktop((s) => s.toggleStartMenu);
 
     return (
-        <div className="w7-taskbar">
+        <div className="w7-taskbar" onClick={(e) => e.stopPropagation()}>
             <button
                 type="button"
                 className="w7-start-orb"
@@ -26,7 +26,7 @@ export function Taskbar() {
                 }}
                 aria-label={startOpen ? "Close Start menu" : "Open Start menu"}
             >
-                <Win7Flag size={22} />
+                <ArcLogo size={22} />
             </button>
 
             <div style={{ width: "1px", background: "rgba(255,255,255,0.18)", margin: "4px 6px" }} />

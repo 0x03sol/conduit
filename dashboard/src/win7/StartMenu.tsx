@@ -62,21 +62,113 @@ export function StartMenu() {
                     </div>
                 </div>
 
-                {/* App list */}
-                <ul className="w7-start-menu-list">
-                    {Object.values(APPS)
-                        .filter((a) => !a.hidden)
-                        .map((app) => (
-                            <MenuItem
-                                key={app.id}
-                                icon={app.icon}
-                                label={app.title}
-                                onClick={() => launch(app.id, app.title)}
-                            />
-                        ))}
-                </ul>
+                {/* Dual Column Layout */}
+                <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                    {/* Left Column: Programs List */}
+                    <div style={{ flex: 1, background: "#ffffff", display: "flex", flexDirection: "column", padding: "4px 6px" }}>
+                        <ul className="w7-start-menu-list" style={{ flex: 1, margin: 0, padding: 0, overflowY: "auto" }}>
+                            {["sender", "operator", "recipient", "readme"].map((id) => {
+                                const app = APPS[id];
+                                if (!app) return null;
+                                return (
+                                    <MenuItem
+                                        key={app.id}
+                                        icon={app.icon}
+                                        label={app.title.split(" — ")[0]}
+                                        onClick={() => launch(app.id, app.title)}
+                                    />
+                                );
+                            })}
+                        </ul>
 
-                {/* Footer with account */}
+                        {/* Start Menu Search Box (Win7 Classic) */}
+                        <div style={{
+                            padding: "6px 4px 4px 4px",
+                            borderTop: "1px solid rgba(0, 0, 0, 0.08)",
+                            marginTop: "auto",
+                            display: "flex",
+                            alignItems: "center"
+                        }}>
+                            <div style={{
+                                position: "relative",
+                                width: "100%",
+                                display: "flex",
+                                alignItems: "center"
+                            }}>
+                                <input 
+                                    type="text" 
+                                    placeholder="Search programs and files" 
+                                    disabled
+                                    style={{
+                                        width: "100%",
+                                        height: "22px",
+                                        padding: "2px 24px 2px 6px",
+                                        fontSize: "11px",
+                                        fontStyle: "italic",
+                                        fontFamily: "Segoe UI, sans-serif",
+                                        border: "1px solid #7a96df",
+                                        boxShadow: "inset 1px 1px 2px rgba(0,0,0,0.1)",
+                                        borderRadius: "2px",
+                                        background: "#ffffff",
+                                        color: "#7f7f7f"
+                                    }}
+                                />
+                                <span style={{
+                                    position: "absolute",
+                                    right: "6px",
+                                    color: "#7a96df",
+                                    fontSize: "12px",
+                                    pointerEvents: "none"
+                                }}>🔍</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Explorer Quick Links */}
+                    <div
+                        style={{
+                            width: "140px",
+                            background: "linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.04) 100%)",
+                            borderLeft: "1px solid rgba(0, 30, 80, 0.12)",
+                            boxShadow: "inset 1px 0 0 rgba(255,255,255,0.45)",
+                            display: "flex",
+                            flexDirection: "column",
+                            padding: "8px 6px",
+                            gap: "4px",
+                        }}
+                    >
+                        {["myComputer", "arcscan", "recycleBin"].map((id) => {
+                            const app = APPS[id];
+                            if (!app) return null;
+                            return (
+                                <button
+                                    key={app.id}
+                                    type="button"
+                                    onClick={() => launch(app.id, app.title)}
+                                    className="w7-start-right-link"
+                                >
+                                    <Icon icon={app.icon} size={16} />
+                                    <span>{app.title.split(" — ")[0]}</span>
+                                </button>
+                            );
+                        })}
+                        <div style={{ flex: 1 }} />
+                        <button
+                            type="button"
+                            onClick={() => {
+                                close();
+                                window.dispatchEvent(new CustomEvent("conduit:tour:start"));
+                            }}
+                            className="w7-start-right-link"
+                            title="Replay the welcome tour"
+                        >
+                            <span aria-hidden="true" style={{ fontSize: "14px", lineHeight: 1, width: 16, textAlign: "center" }}>?</span>
+                            <span>Take the tour</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Footer with account / shutdown actions */}
                 <div className="w7-start-menu-footer">
                     <SignInArea onAfterAction={close} />
                 </div>
