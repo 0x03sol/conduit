@@ -160,9 +160,3 @@ Beyond the security follow-ups:
 - **CCTP version sanity check** * Iris responses include `cctpVersion`;
   validate it equals 2 before submitting `receiveMessage` so a stray V1
   message can't accidentally hit the V2 transmitter.
-
-## Documentation parity
-
-- Update `memory.md § Current state` continuously as phases advance.
-- Keep `ROADMAP.md` (this file) in sync after every audit pass.
-- README in cmd app + Notepad app reflect production state.
