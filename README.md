@@ -60,20 +60,6 @@ cd indexer && pnpm install && pnpm dev
 cd relayer && pnpm install && pnpm test
 ```
 
-## Documents
-
-- [`PRODUCT.md`](PRODUCT.md) — product purpose, users, anti-references
-- [`DESIGN.md`](DESIGN.md) — visual + interaction design system
-- [`ROADMAP.md`](ROADMAP.md) — v2 hardening items (audit follow-ups,
-  Ownable2Step, Pausable, Privy AuthBoundary, etc.)
-- [`progress.md`](progress.md) — task tracker with phase status
-- [`memory.md`](memory.md) — durable cross-session decisions and
-  verified addresses
-- [`AGENTS.md`](AGENTS.md) — agent entry point and skill activation
-  rules
-- [`final-dapp.md`](final-dapp.md) — original proposal (architecture,
-  primitives, phase plan)
-
 ## Stack
 
 - Solidity 0.8.26, Foundry, OpenZeppelin, Permit2
