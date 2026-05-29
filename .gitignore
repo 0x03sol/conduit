@@ -71,3 +71,17 @@ indexer/.next-env.d.ts
 __pycache__/
 .aidesigner/*
 !.aidesigner/.gitkeep
+
+# Internal AI-agent tooling (kept local, never committed)
+.aidesigner/
+.claude/
+.impeccable/
+.kiro/
+.mcp.json
+skills-lock.json
+AGENTS.md
+progress.md
+memory.md
+final-dapp.md
+PRODUCT.md
+DESIGN.md
