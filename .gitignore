@@ -69,3 +69,5 @@ indexer/.next-env.d.ts
 .venv-pw/
 .venv/
 __pycache__/
+.aidesigner/*
+!.aidesigner/.gitkeep

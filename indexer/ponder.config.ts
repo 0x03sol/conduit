@@ -15,15 +15,15 @@ export default createConfig({
         BatchRegistry: {
             abi: BatchRegistryAbi,
             network: "arcTestnet",
-            // Phase 2.3 deployment (active for the dashboard).
-            address: "0x823b34D7FBa61628cE3e665F86f715e823657A17",
-            startBlock: 43964622,
+            // Phase 4 deployment (audit-fixed: dispatcher allowlist, withdrawFees, MAX_FEE).
+            address: "0x34705cF46Ddf9f3cE53f5492B6376678BE62F0fc",
+            startBlock: 44463993,
         },
         BatchRouter: {
             abi: BatchRouterAbi,
             network: "arcTestnet",
-            address: "0x1a8F8B0aA5fe50c3c9B48E5aCA56aBe2CE52452f",
-            startBlock: 43964624,
+            address: "0x6eD720FDF5c28cF8895A8049Fe13AF1384d82d20",
+            startBlock: 44463993,
         },
     },
 });
