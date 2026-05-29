@@ -44,6 +44,7 @@ contract CCTPHookReceiverTest is Test {
     uint256 public constant FEE = 1e6;
 
     event TrustedRemoteSenderSet(uint32 indexed srcDomain, bytes32 indexed sender);
+    event DispatcherSet(address indexed dispatcher, bool allowed);
     event Swept(address indexed token, address indexed to, uint256 amount);
     event MessageHandled(
         uint32 indexed sourceDomain,
@@ -68,6 +69,12 @@ contract CCTPHookReceiverTest is Test {
 
         vm.prank(owner);
         receiver.setTrustedRemoteSender(SRC_DOMAIN, TRUSTED_SENDER);
+
+        // Grant the test contract dispatcher rights so the manual-trigger
+        // tests (processHook / processBurnMessage / processCCTPMessage) can
+        // call those methods directly without an extra prank in each test.
+        vm.prank(owner);
+        receiver.setDispatcher(address(this), true);
     }
 
     // ─────────────────── Helpers ───────────────────
@@ -331,7 +338,7 @@ contract CCTPHookReceiverTest is Test {
         (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
         usdc.mint(address(receiver), totalNeeded);
 
-        // No prank — anyone can call processHook (open by design).
+        // The test contract was added as a dispatcher in setUp().
         vm.expectEmit(true, false, false, true, address(receiver));
         emit HookProcessed(batchId, totalNeeded);
 
@@ -341,6 +348,40 @@ contract CCTPHookReceiverTest is Test {
         assertEq(usdc.balanceOf(alice), 100e6);
         assertEq(usdc.balanceOf(bob), 50e6);
         assertEq(usdc.balanceOf(address(receiver)), 0);
+    }
+
+    function test_ProcessHook_RevertWhen_NotDispatcher() public {
+        (bytes32 batchId, uint256 totalNeeded) = _createUsdcBatch();
+        usdc.mint(address(receiver), totalNeeded);
+
+        // Some unrelated caller — not on the dispatcher allowlist.
+        address mallory = makeAddr("mallory");
+        vm.prank(mallory);
+        vm.expectRevert(CCTPHookReceiver.NotDispatcher.selector);
+        receiver.processHook(_hookData(batchId));
+    }
+
+    function test_SetDispatcher_RevertWhen_NotOwner() public {
+        address rando = makeAddr("rando");
+        vm.prank(rando);
+        vm.expectRevert(CCTPHookReceiver.NotOwner.selector);
+        receiver.setDispatcher(rando, true);
+    }
+
+    function test_SetDispatcher_TogglesFlagAndEmits() public {
+        address newRelayer = makeAddr("newRelayer");
+
+        vm.expectEmit(true, false, false, true, address(receiver));
+        emit DispatcherSet(newRelayer, true);
+        vm.prank(owner);
+        receiver.setDispatcher(newRelayer, true);
+        assertTrue(receiver.isDispatcher(newRelayer));
+
+        vm.expectEmit(true, false, false, true, address(receiver));
+        emit DispatcherSet(newRelayer, false);
+        vm.prank(owner);
+        receiver.setDispatcher(newRelayer, false);
+        assertFalse(receiver.isDispatcher(newRelayer));
     }
 
     function test_ProcessHook_RevertWhen_NoFunding() public {

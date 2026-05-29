@@ -32,6 +32,8 @@ contract DeployArcFXEscrow is Script {
     uint256 internal constant ARC_TESTNET_CHAIN_ID = 5042002;
     address internal constant ARC_USDC = 0x3600000000000000000000000000000000000000;
     address internal constant ARC_EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
+    // Ticker is a 4-char ASCII string fitting comfortably in bytes32; cast is safe.
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes32 internal constant EURC_TICKER = bytes32("EURC");
 
     error WrongChain(uint256 got, uint256 expected);

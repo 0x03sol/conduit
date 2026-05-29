@@ -117,8 +117,17 @@ contract BatchRouter is ReentrancyGuard {
     /// @param batchId         Registry batch ID.
     /// @param fundedAmount    USDC the caller commits. Caller must have
     ///                        pre-approved this contract.
-    /// @param maxSlippageBps  Slippage cap in bps (0..10_000). Currently
-    ///                        validated only; reserved for future use.
+    /// @param maxSlippageBps  Slippage cap in bps (0..10_000).
+    ///                        **v1 RESERVED — bounds-checked but not yet
+    ///                        applied.** v1 enforces zero slippage on the
+    ///                        FX leg via the strict `received == totalNeeded`
+    ///                        invariant below; the maker-signed quote MUST
+    ///                        size to exactly the recipients' total. The
+    ///                        field is kept in the function signature and
+    ///                        in the CCTP hookData layout for forward-
+    ///                        compatibility with v2's relaxed-slippage
+    ///                        adapter, which will compute
+    ///                        `minAmountOut = totalNeeded * (10_000 - bps) / 10_000`.
     /// @param fxExtraData     Adapter-specific payload for the FX leg
     ///                        (encoded `(IFxEscrow.Quote, makerSig)` for
     ///                        `FxEscrowAdapter`; ignored by `MockFxAdapter`).

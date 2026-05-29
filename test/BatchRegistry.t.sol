@@ -55,6 +55,7 @@ contract BatchRegistryTest is Test {
         BatchRegistry.Status oldStatus,
         BatchRegistry.Status newStatus
     );
+    event FeesWithdrawn(address indexed to, uint256 amount);
 
     function setUp() public {
         usdc = new MockUSDC();
@@ -182,6 +183,76 @@ contract BatchRegistryTest is Test {
         vm.prank(owner);
         registry.setRegistrationFee(0);
         assertEq(registry.registrationFee(), 0);
+    }
+
+    function test_SetRegistrationFee_RevertWhen_AboveCap() public {
+        uint256 cap = registry.MAX_REGISTRATION_FEE();
+        vm.prank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(BatchRegistry.FeeTooHigh.selector, cap + 1, cap)
+        );
+        registry.setRegistrationFee(cap + 1);
+    }
+
+    function test_Constructor_RevertWhen_FeeAboveCap() public {
+        uint256 cap = registry.MAX_REGISTRATION_FEE();
+        vm.expectRevert(
+            abi.encodeWithSelector(BatchRegistry.FeeTooHigh.selector, cap + 1, cap)
+        );
+        new BatchRegistry(address(usdc), cap + 1);
+    }
+
+    // ========================================================================
+    // withdrawFees
+    // ========================================================================
+
+    function test_WithdrawFees_RevertWhen_NotOwner() public {
+        vm.prank(eve);
+        vm.expectRevert(BatchRegistry.NotOwner.selector);
+        registry.withdrawFees(eve, 0);
+    }
+
+    function test_WithdrawFees_RevertWhen_ZeroAddress() public {
+        vm.prank(owner);
+        vm.expectRevert(BatchRegistry.ZeroAddress.selector);
+        registry.withdrawFees(address(0), 0);
+    }
+
+    function test_WithdrawFees_HappyPath_ZeroDrainsFullBalance() public {
+        // Build up some fee revenue first.
+        vm.prank(sender);
+        registry.createBatch(_threeRecipients());
+        vm.prank(sender2);
+        registry.createBatch(_threeRecipients());
+
+        uint256 expected = REGISTRATION_FEE * 2;
+        assertEq(usdc.balanceOf(address(registry)), expected);
+
+        address recipient = makeAddr("treasury");
+
+        vm.expectEmit(true, false, false, true, address(registry));
+        emit FeesWithdrawn(recipient, expected);
+        vm.prank(owner);
+        registry.withdrawFees(recipient, 0);
+
+        assertEq(usdc.balanceOf(address(registry)), 0);
+        assertEq(usdc.balanceOf(recipient), expected);
+    }
+
+    function test_WithdrawFees_HappyPath_PartialAmount() public {
+        vm.prank(sender);
+        registry.createBatch(_threeRecipients());
+        vm.prank(sender2);
+        registry.createBatch(_threeRecipients());
+
+        address recipient = makeAddr("treasury");
+        uint256 partialAmount = REGISTRATION_FEE; // half of 2 fees
+
+        vm.prank(owner);
+        registry.withdrawFees(recipient, partialAmount);
+
+        assertEq(usdc.balanceOf(address(registry)), REGISTRATION_FEE);
+        assertEq(usdc.balanceOf(recipient), partialAmount);
     }
 
     // ========================================================================

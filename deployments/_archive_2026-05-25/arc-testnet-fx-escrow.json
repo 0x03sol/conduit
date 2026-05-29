@@ -1,6 +1,6 @@
 {
   "chainId": 5042002,
-  "deployedAt": 1779987602,
+  "deployedAt": 1779718478,
   "deployer": "0x27f8c09a134037380a0164797e54f9B32B9fC6e2",
   "usdc": "0x3600000000000000000000000000000000000000",
   "registrationFee": 1000000,
@@ -11,9 +11,9 @@
     "maker": "0x27f8c09a134037380a0164797e54f9B32B9fC6e2"
   },
   "contracts": {
-    "MockFxEscrow": "0xbfCf669DC893c66007741AD8812e39405e4D6076",
-    "FxEscrowAdapter": "0xB26eF145C041c3d2a1b31ccda8aCB88fe242ab3d",
-    "BatchRegistry": "0x34705cF46Ddf9f3cE53f5492B6376678BE62F0fc",
-    "BatchRouter": "0x6eD720FDF5c28cF8895A8049Fe13AF1384d82d20"
+    "MockFxEscrow": "0x5ACcc61A1a7A458666dFBa56b8fC1bAc6Dee1E69",
+    "FxEscrowAdapter": "0xF8935eB02aCB9c51128A1C92D5942fA35dB1F8e5",
+    "BatchRegistry": "0x2CBa24070eEd0378c5a080Fe3BF059A96FeC81eE",
+    "BatchRouter": "0x488b7E6f53AaabB45f3498143BF314052788dE5F"
   }
 }

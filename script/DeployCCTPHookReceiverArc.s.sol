@@ -21,7 +21,7 @@ contract DeployCCTPHookReceiverArc is Script {
     uint256 internal constant ARC_TESTNET_CHAIN_ID = 5042002;
     address internal constant ARC_USDC = 0x3600000000000000000000000000000000000000;
     address internal constant ARC_MESSAGE_TRANSMITTER = 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275;
-    address internal constant PHASE_2_3_ROUTER = 0x1a8F8B0aA5fe50c3c9B48E5aCA56aBe2CE52452f;
+    address internal constant PHASE_2_3_ROUTER = 0x6eD720FDF5c28cF8895A8049Fe13AF1384d82d20;
 
     error WrongChain(uint256 got, uint256 expected);
 
@@ -48,6 +48,13 @@ contract DeployCCTPHookReceiverArc is Script {
             ARC_USDC,
             PHASE_2_3_ROUTER
         );
+
+        // Allowlist the deployer as a dispatcher so manual end-to-end
+        // tests (`processHook` / `processBurnMessage` / `processCCTPMessage`)
+        // work out of the box. Operators MUST also call
+        // setDispatcher(<relayer hot wallet>, true) before going live so
+        // the relayer can dispatch dispatched batches automatically.
+        receiver.setDispatcher(deployer, true);
         vm.stopBroadcast();
 
         console2.log("Deployed:");
@@ -66,5 +73,11 @@ contract DeployCCTPHookReceiverArc is Script {
         j = string.concat(j, "}\n");
         vm.writeFile("./deployments/arc-testnet-cctp-receiver.json", j);
         console2.log("Wrote deployments/arc-testnet-cctp-receiver.json");
+        console2.log("");
+        console2.log("NEXT STEPS:");
+        console2.log("  1. cast send <receiver> 'setTrustedRemoteSender(uint32,bytes32)'");
+        console2.log("       0 <Sepolia TokenMessengerV2 padded to bytes32>");
+        console2.log("  2. cast send <receiver> 'setDispatcher(address,bool)' <relayer-hot-wallet> true");
+        console2.log("  3. Operator can now run processHook / processBurnMessage from <relayer>.");
     }
 }

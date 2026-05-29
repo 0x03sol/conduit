@@ -55,6 +55,12 @@ contract BatchRegistry {
     /// @notice USDC token used to pay registration fees.
     IERC20 public immutable usdc;
 
+    /// @notice Hard ceiling on the registration fee. Caps owner risk: a
+    ///         misconfigured fee cannot brick batch creation by demanding
+    ///         absurd amounts of USDC. 1_000 USDC (in 6-decimal base units)
+    ///         is more than any real B2B sender would tolerate.
+    uint256 public constant MAX_REGISTRATION_FEE = 1_000e6;
+
     /// @notice Admin authorized to set router and fee.
     address public owner;
 
@@ -85,6 +91,7 @@ contract BatchRegistry {
     event RouterSet(address indexed router);
     event RegistrationFeeSet(uint256 oldFee, uint256 newFee);
     event StatusUpdated(bytes32 indexed batchId, Status oldStatus, Status newStatus);
+    event FeesWithdrawn(address indexed to, uint256 amount);
 
     // ───────────────────────── Errors ─────────────────────────
 
@@ -92,6 +99,7 @@ contract BatchRegistry {
     error NotRouter();
     error RouterAlreadySet();
     error ZeroAddress();
+    error FeeTooHigh(uint256 fee, uint256 max);
     error EmptyRecipients();
     error ZeroRecipientWallet();
     error ZeroRecipientAmount();
@@ -116,6 +124,9 @@ contract BatchRegistry {
     /// @param _registrationFee Initial USDC fee charged at `createBatch`.
     constructor(address _usdc, uint256 _registrationFee) {
         if (_usdc == address(0)) revert ZeroAddress();
+        if (_registrationFee > MAX_REGISTRATION_FEE) {
+            revert FeeTooHigh(_registrationFee, MAX_REGISTRATION_FEE);
+        }
         usdc = IERC20(_usdc);
         registrationFee = _registrationFee;
         owner = msg.sender;
@@ -134,10 +145,27 @@ contract BatchRegistry {
     }
 
     /// @notice Update the USDC fee charged at registration. May be set to 0.
+    /// @dev    Capped at `MAX_REGISTRATION_FEE` so an owner mistake cannot
+    ///         brick batch creation.
     function setRegistrationFee(uint256 newFee) external onlyOwner {
+        if (newFee > MAX_REGISTRATION_FEE) {
+            revert FeeTooHigh(newFee, MAX_REGISTRATION_FEE);
+        }
         uint256 old = registrationFee;
         registrationFee = newFee;
         emit RegistrationFeeSet(old, newFee);
+    }
+
+    /// @notice Withdraw collected registration fees (USDC) to `to`. Pass
+    ///         `amount = 0` to withdraw the contract's full USDC balance.
+    /// @dev    Fees accumulate in this contract from `createBatch`. Without
+    ///         this hook they would be permanently locked.
+    function withdrawFees(address to, uint256 amount) external onlyOwner {
+        if (to == address(0)) revert ZeroAddress();
+        uint256 amt = amount == 0 ? usdc.balanceOf(address(this)) : amount;
+        if (amt == 0) return; // nothing to withdraw — silent no-op
+        usdc.safeTransfer(to, amt);
+        emit FeesWithdrawn(to, amt);
     }
 
     // ───────────────────────── Core ─────────────────────────

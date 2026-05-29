@@ -45,9 +45,13 @@ contract OverdeliveringAdapter is IFXAdapter {
         external
         returns (uint256 amountOut)
     {
+        // Test mock — these mock ERC20s always succeed; return values are not
+        // meaningful and are intentionally ignored.
+        // forge-lint: disable-next-line(erc20-unchecked-transfer)
         ERC20(usdc).transferFrom(msg.sender, address(this), amountIn);
         // Always over-deliver: 2× the minAmountOut.
         amountOut = amountIn * 10; // arbitrary, way more than needed
+        // forge-lint: disable-next-line(erc20-unchecked-transfer)
         ERC20(brla).transfer(msg.sender, amountOut);
         return amountOut;
     }
@@ -68,7 +72,10 @@ contract BatchRouterFXTest is Test {
     address public bob = makeAddr("bob");
     address public charlie = makeAddr("charlie");
 
+    // 4-char ASCII tickers fit in bytes32; cast is safe.
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes32 public constant USDC_TICKER = bytes32("USDC");
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes32 public constant BRLA_TICKER = bytes32("BRLA");
 
     /// 1 USDC = 5 BRLA → rate is 5e18 (per MockFxAdapter scaling).

@@ -26,10 +26,19 @@ import {IMessageHandlerV2} from "./interfaces/IMessageHandlerV2.sol";
 ///           2. `trustedRemoteSenders[srcDomain] == sender` allowlist.
 ///              Both checks together prevent any spoofed CCTP message from
 ///              being processed (audit C7, F9).
-///           3. Funded amount = `usdc.balanceOf(this)` at hook time. The
-///              receiver MUST be empty between settlements; any residual
-///              from a previous USDC-corridor refund stays here until the
-///              owner sweeps. The `sweep()` admin function drains it.
+///           3. Funded amount = `usdc.balanceOf(this)` at hook time. v1
+///              forwards the contract's full USDC balance to the router.
+///              After H-1 (`onlyDispatcher` gate) only the operator's
+///              relayer can dispatch, so the attack surface is closed; the
+///              remaining concern is correctness, not security. Residual
+///              USDC from a prior batch's USDC-corridor refund compounds
+///              into the next dispatch's `fundedAmount` until `sweep()`
+///              is called. The `Residual` event below lets operators
+///              monitor the leftover after each dispatch.
+///              v2 plan: caller passes the expected mint amount (decoded
+///              from BurnMessageV2 offset 68) as an explicit parameter
+///              and the receiver only forwards that exact amount to the
+///              router regardless of contract balance.
 ///           4. `forceApprove(router, x)` then reset to 0 around
 ///              `router.execute` (audit C27 weird-ERC20 defence).
 ///           5. `nonReentrant` on the hook entry — defence-in-depth on top
@@ -56,9 +65,21 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
     ///         own contract; in either case its bytes32-padded address.
     mapping(uint32 => bytes32) public trustedRemoteSenders;
 
+    /// @notice Allowlist of addresses authorized to trigger the manual
+    ///         dispatch methods (`processHook`, `processBurnMessage`,
+    ///         `processCCTPMessage`). Closes the front-running risk noted
+    ///         on those methods: only an operator-controlled relayer (or
+    ///         the contract owner during emergency recovery) can dispatch
+    ///         a freshly-minted batch on this contract. The IMessageHandlerV2
+    ///         entry points (`handleReceive*Message`) remain gated by
+    ///         `msg.sender == messageTransmitter` and are unaffected by
+    ///         this allowlist.
+    mapping(address => bool) public isDispatcher;
+
     // ───────────────────────── Events ─────────────────────────
 
     event TrustedRemoteSenderSet(uint32 indexed srcDomain, bytes32 indexed sender);
+    event DispatcherSet(address indexed dispatcher, bool allowed);
     event Swept(address indexed token, address indexed to, uint256 amount);
     event MessageHandled(
         uint32 indexed sourceDomain,
@@ -67,11 +88,17 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
         uint256 fundedAmount
     );
     event HookProcessed(bytes32 indexed batchId, uint256 fundedAmount);
+    /// @notice Emitted after every dispatch. `residualUsdc` is the USDC
+    ///         left on this contract once the router returned (e.g. the
+    ///         USDC corridor's excess refund). Operators monitor this for
+    ///         M-2 follow-up: when it grows, call `sweep()`.
+    event Residual(bytes32 indexed batchId, uint256 residualUsdc);
 
     // ───────────────────────── Errors ─────────────────────────
 
     error ZeroAddress();
     error NotOwner();
+    error NotDispatcher();
     error NotMessageTransmitter();
     error UntrustedRemoteSender(uint32 srcDomain, bytes32 sender);
     error NoFunding();
@@ -80,6 +107,11 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
+        _;
+    }
+
+    modifier onlyDispatcher() {
+        if (!isDispatcher[msg.sender]) revert NotDispatcher();
         _;
     }
 
@@ -104,6 +136,16 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
         emit TrustedRemoteSenderSet(srcDomain, sender);
     }
 
+    /// @notice Allow / disallow `dispatcher` to call the manual-trigger
+    ///         methods (`processHook`, `processBurnMessage`,
+    ///         `processCCTPMessage`). Intended use: allowlist the
+    ///         operator's relayer EOA so only it can dispatch batches on
+    ///         this contract after a CCTP mint lands.
+    function setDispatcher(address dispatcher, bool allowed) external onlyOwner {
+        isDispatcher[dispatcher] = allowed;
+        emit DispatcherSet(dispatcher, allowed);
+    }
+
     /// @notice Sweep residual tokens (typically USDC refund from the USDC
     ///         corridor) to a designated address.
     function sweep(address token, address to, uint256 amount) external onlyOwner {
@@ -112,6 +154,17 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
     }
 
     // ───────────────────────── IMessageHandlerV2 ─────────────────────────
+    //
+    // NOTE: For Conduit's CCTP V2 token-burn flow these two methods are
+    // UNREACHABLE. CCTP V2 routes token-burn messages to TokenMessengerV2
+    // (the registered handler), which mints USDC to mintRecipient = this
+    // contract but does NOT call back into the recipient with hookData.
+    // See the longer note above `processHook` below.
+    //
+    // The methods are kept solely to satisfy the `IMessageHandlerV2`
+    // interface in case Conduit ever consumes a non-token `sendMessage`
+    // flow targeted at this contract directly. If/when removed, also drop
+    // the `IMessageHandlerV2` inheritance.
 
     /// @inheritdoc IMessageHandlerV2
     function handleReceiveFinalizedMessage(
@@ -165,7 +218,7 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
     ///         minted USDC to this contract. The relayer (or any caller)
     ///         passes the hookData payload that was embedded in the
     ///         BurnMessageV2.
-    function processHook(bytes calldata hookData) external nonReentrant returns (bool) {
+    function processHook(bytes calldata hookData) external onlyDispatcher nonReentrant returns (bool) {
         return _dispatch(hookData);
     }
 
@@ -184,7 +237,7 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
     ///           offset 228 bytes    hookData (dynamic)
     ///         Use this when the caller has the inner BurnMessageV2 only
     ///         (e.g. via `IMessageHandlerV2`'s `messageBody` parameter).
-    function processBurnMessage(bytes calldata burnMessage) external nonReentrant returns (bool) {
+    function processBurnMessage(bytes calldata burnMessage) external onlyDispatcher nonReentrant returns (bool) {
         if (burnMessage.length < 228) revert MalformedBurnMessage();
         return _dispatch(burnMessage[228:]);
     }
@@ -198,7 +251,7 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
     ///         So the hookData starts at offset 148 + 228 = 376.
     ///         Use this when the relayer has the raw `message` from Iris and
     ///         wants a one-call dispatch.
-    function processCCTPMessage(bytes calldata cctpMessage) external nonReentrant returns (bool) {
+    function processCCTPMessage(bytes calldata cctpMessage) external onlyDispatcher nonReentrant returns (bool) {
         if (cctpMessage.length < 376) revert MalformedCCTPMessage();
         return _dispatch(cctpMessage[376:]);
     }
@@ -217,6 +270,7 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
         usdc.forceApprove(address(router), 0);
 
         emit HookProcessed(batchId, fundedAmount);
+        emit Residual(batchId, usdc.balanceOf(address(this)));
         return true;
     }
 
@@ -246,6 +300,7 @@ contract CCTPHookReceiver is IMessageHandlerV2, ReentrancyGuard {
         usdc.forceApprove(address(router), 0);
 
         emit MessageHandled(sourceDomain, sender, batchId, fundedAmount);
+        emit Residual(batchId, usdc.balanceOf(address(this)));
         return true;
     }
 }

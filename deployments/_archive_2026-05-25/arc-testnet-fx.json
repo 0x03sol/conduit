@@ -1,0 +1,17 @@
+{
+  "chainId": 5042002,
+  "deployedAt": 1779717896,
+  "deployer": "0x27f8c09a134037380a0164797e54f9B32B9fC6e2",
+  "usdc": "0x3600000000000000000000000000000000000000",
+  "registrationFee": 1000000,
+  "fx": {
+    "ticker": "EURC",
+    "token": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    "rate1e6": 1000000
+  },
+  "contracts": {
+    "BatchRegistry": "0x823b34D7FBa61628cE3e665F86f715e823657A17",
+    "BatchRouter": "0x1a8F8B0aA5fe50c3c9B48E5aCA56aBe2CE52452f",
+    "MockFxAdapter": "0x631154ff664c35FcD22C85622cfe781C4Ac2Bc21"
+  }
+}
