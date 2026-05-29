@@ -8,8 +8,6 @@ export const metadata: Metadata = {
     description: "Atomic cross-chain B2B settlement on Arc — Windows 7 Aero edition",
 };
 
-export const dynamic = "force-dynamic";
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en">

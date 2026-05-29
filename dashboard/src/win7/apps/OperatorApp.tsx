@@ -18,7 +18,12 @@ export function OperatorApp() {
         const load = () =>
             fetchRecentSettlements(50)
                 .then((rows) => alive && setItems(rows))
-                .catch((e) => alive && setError(String(e)))
+                .catch(() => {
+                    if (!alive) return;
+                    // Indexer is optional — the chain event watcher below
+                    // still populates the live feed. Show a soft notice.
+                    setError("Indexer offline. Showing live chain events only.");
+                })
                 .finally(() => alive && setLoading(false));
         load();
         const t = setInterval(load, 6_000);
@@ -53,7 +58,7 @@ export function OperatorApp() {
             )}
             {error && (
                 <div role="tooltip" style={{ position: "static", display: "block", marginBottom: "8px", background: "#ffe1e1" }}>
-                    Indexer unreachable: {error}
+                    Indexer status: {error}
                 </div>
             )}
 

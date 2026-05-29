@@ -3,26 +3,27 @@ const nextConfig = {
     reactStrictMode: true,
     typescript: { ignoreBuildErrors: false },
     eslint: { ignoreDuringBuilds: false },
+
     /**
-     * Proxy the Ponder indexer through the Next.js server so the browser
-     * never has to reach the indexer directly. The browser hits
-     * `/_indexer/...` (same origin as the dashboard, so any SSH port-
-     * forward / domain just works), and Next.js (running on the same
-     * host as Ponder) forwards the request to localhost:42069.
+     * Static HTML export (Cloudflare Pages target). Every page in this app
+     * is a client-side React surface (Win7 desktop, wagmi + Privy auth,
+     * canvas games, terminal). No server actions, no route handlers,
+     * nothing that needs a Node runtime at request time.
      *
-     * NEXT_PUBLIC_INDEXER_HOST overrides the upstream when Ponder lives
-     * on a different host than Next; defaults to localhost:42069 which
-     * matches Ponder's default dev port.
+     * Trade-off vs Node-rendered Next: no `rewrites()` or `redirects()`,
+     * which is why the dev-time `/_indexer/*` proxy was removed. The
+     * dashboard now reads the indexer directly when `NEXT_PUBLIC_PONDER_URL`
+     * is reachable, and falls back to "indexer offline" inside the
+     * Settlement Monitor when it isn't.
      */
-    async rewrites() {
-        const upstream = process.env.INDEXER_UPSTREAM ?? "http://localhost:42069";
-        return [
-            {
-                source: "/_indexer/:path*",
-                destination: `${upstream}/:path*`,
-            },
-        ];
-    },
+    output: "export",
+    /** next/image isn't used in this app, but the static exporter still
+     *  expects this flag. Cheap to set defensively. */
+    images: { unoptimized: true },
+    /** Cloudflare Pages serves /foo as /foo/index.html; trailingSlash makes
+     *  Next emit that layout consistently. */
+    trailingSlash: true,
+
     webpack: (config) => {
         // wagmi → @metamask/sdk has an optional @react-native-async-storage/async-storage
         // dependency that doesn't exist in browser builds. Mark it as a missing module
