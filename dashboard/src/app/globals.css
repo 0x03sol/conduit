@@ -667,12 +667,10 @@ body {
 }
 
 
-/* Floating Arc emblem in the desktop sky — referenced by EarthBackground.
-   Gentle 4s ease-in-out alternate vertical bob, ~10px peak-to-peak.
-   `translateX(-50%)` is preserved so horizontal centering stays put. */
-@keyframes arc-emblem-float {
-    from { transform: translate(-50%, 0); }
-    to   { transform: translate(-50%, -10px); }
+/* Caret blink for the typing 'Arc Conduit' wordmark on the desktop.
+   Hard on/off via step-end matches authentic terminal cursors. */
+@keyframes arc-wordmark-caret {
+    50% { opacity: 0; }
 }
 
 

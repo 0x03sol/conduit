@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { MeteorShower } from "./MeteorShower";
 
 /**
@@ -50,17 +52,11 @@ export default function EarthBackground() {
                 }}
             />
 
-            {/* Arc brand mark — inline SVG Λ + "Arc" wordmark in pure
-                white, with a unified soft glow on the parent (drop-shadow
-                filter spans both the SVG and the text glyphs). Sits in
-                the gap between the two top windows after the boot
-                cascade lands, so it stays visible even with all windows
-                open.
-
-                The 4s ease-in-out alternate vertical bob (defined in
-                globals.css as @keyframes arc-emblem-float) keeps the
-                "floating in zero-G" feel from the previous img-based
-                emblem. */}
+            {/* Arc brand mark — inline SVG Λ + typing 'Arc Conduit'
+                wordmark. The text types itself out once on mount with a
+                blinking caret, then settles. Sits in the gap between the
+                two top windows after the boot cascade lands, so it stays
+                visible even with all windows open. */}
             <div
                 aria-hidden
                 style={{
@@ -74,9 +70,7 @@ export default function EarthBackground() {
                     gap: "18px",
                     pointerEvents: "none",
                     userSelect: "none",
-                    filter: "drop-shadow(0 0 18px rgba(255, 255, 255, 0.45))",
-                    animation:
-                        "arc-emblem-float 4s ease-in-out infinite alternate",
+                    filter: "drop-shadow(0 0 22px rgba(255, 255, 255, 0.55))",
                 }}
             >
                 <svg
@@ -92,18 +86,7 @@ export default function EarthBackground() {
                         fill="#FFFFFF"
                     />
                 </svg>
-                <span
-                    style={{
-                        color: "#FFFFFF",
-                        fontSize: "72px",
-                        fontWeight: 500,
-                        letterSpacing: "-1.5px",
-                        fontFamily: '"Segoe UI", sans-serif',
-                        lineHeight: 1,
-                    }}
-                >
-                    Arc
-                </span>
+                <ArcTypingWordmark />
             </div>
 
             {/* Live tx meteor shower — one streak per real Arc-testnet
@@ -111,5 +94,58 @@ export default function EarthBackground() {
                 MeteorShower) so it never paints on the Earth surface. */}
             <MeteorShower />
         </div>
+    );
+}
+
+
+/**
+ * ArcTypingWordmark
+ *
+ * Types the brand wordmark "Arc Conduit" once on mount, then shows a
+ * blinking caret. Bigger weight + tighter tracking + a subtle text
+ * shadow so the white reads cleanly over the wallpaper without the old
+ * floating bob (which made body copy in the windows below feel jittery).
+ */
+function ArcTypingWordmark() {
+    const FULL = "Arc Conduit";
+    const [n, setN] = useState(0);
+
+    useEffect(() => {
+        if (n >= FULL.length) return;
+        const t = setTimeout(() => setN((v) => v + 1), 95); // ~1.05s total
+        return () => clearTimeout(t);
+    }, [n]);
+
+    return (
+        <span
+            style={{
+                color: "#FFFFFF",
+                fontSize: "72px",
+                fontWeight: 600,
+                letterSpacing: "-2px",
+                fontFamily: '"Segoe UI", sans-serif',
+                lineHeight: 1,
+                textShadow:
+                    "0 2px 4px rgba(0, 0, 0, 0.45), 0 0 22px rgba(255, 255, 255, 0.25)",
+                whiteSpace: "pre",
+            }}
+        >
+            {FULL.slice(0, n)}
+            {n < FULL.length && (
+                <span
+                    aria-hidden
+                    style={{
+                        display: "inline-block",
+                        width: "0.05em",
+                        height: "0.85em",
+                        background: "#ffffff",
+                        marginLeft: "0.08em",
+                        verticalAlign: "text-bottom",
+                        boxShadow: "0 0 8px rgba(255,255,255,0.7)",
+                        animation: "arc-wordmark-caret 1s step-end infinite",
+                    }}
+                />
+            )}
+        </span>
     );
 }
