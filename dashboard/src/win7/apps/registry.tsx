@@ -23,6 +23,9 @@ const RecipientApp  = dynamic(() => import("./RecipientApp").then((m) => m.Recip
 const MyComputerApp = dynamic(() => import("./MyComputerApp").then((m) => m.MyComputerApp), { ssr: false });
 const CommandPromptApp = dynamic(() => import("./CommandPromptApp").then((m) => m.CommandPromptApp), { ssr: false });
 const NotepadApp    = dynamic(() => import("./NotepadApp").then((m) => m.NotepadApp),       { ssr: false });
+const RoadmapApp    = dynamic(() => import("./RoadmapApp").then((m) => m.RoadmapApp),       { ssr: false });
+const ArcSolitaireApp = dynamic(() => import("./ArcSolitaireApp").then((m) => m.ArcSolitaireApp), { ssr: false });
+const ArcSnakeApp   = dynamic(() => import("./ArcSnakeApp").then((m) => m.ArcSnakeApp),     { ssr: false });
 const RecycleBinApp = dynamic(() => import("./RecycleBinApp").then((m) => m.RecycleBinApp), { ssr: false });
 const ArcscanApp    = dynamic(() => import("./ArcscanApp").then((m) => m.ArcscanApp),       { ssr: false });
 const ArcTvApp      = dynamic(() => import("./ArcTvApp").then((m) => m.ArcTvApp),           { ssr: false });
@@ -34,6 +37,9 @@ export const APPS: Record<string, AppConfig> = {
     myComputer: { id: "myComputer", title: "My Computer",         icon: "myComputer", component: MyComputerApp, defaultSize: { width: 520, height: 400 } },
     cmd:        { id: "cmd",        title: "Command Prompt",      iconLabel: "cmd.exe", icon: "cmd", component: CommandPromptApp, defaultSize: { width: 560, height: 440 } },
     notepad:    { id: "notepad",    title: "How It Works — Notepad", iconLabel: "How It Works", icon: "notepad", component: NotepadApp, defaultSize: { width: 640, height: 540 } },
+    roadmap:    { id: "roadmap",    title: "Roadmap",            iconLabel: "Roadmap", icon: "roadmap", component: RoadmapApp, defaultSize: { width: 600, height: 560 } },
+    arcSolitaire: { id: "arcSolitaire", title: "Arc Solitaire", iconLabel: "Arc Solitaire", icon: "arcSolitaire", component: ArcSolitaireApp, defaultSize: { width: 560, height: 600 } },
+    arcSnake:   { id: "arcSnake",   title: "Arc Snake",          iconLabel: "Arc Snake", icon: "arcSnake", component: ArcSnakeApp, defaultSize: { width: 480, height: 460 } },
     recycleBin: { id: "recycleBin", title: "Recycle Bin",         icon: "recycleBin", component: RecycleBinApp, defaultSize: { width: 480, height: 320 } },
     arcscan:    { id: "arcscan",    title: "Arcscan — Internet Explorer", icon: "arcscan", component: ArcscanApp, defaultSize: { width: 600, height: 400 } },
     arcTv:      { id: "arcTv",      title: "Arc TV — Media Player", iconLabel: "Arc TV.exe", icon: "arcTv", component: ArcTvApp, defaultSize: { width: 720, height: 480 } },
@@ -48,5 +54,8 @@ export const DESKTOP_ICON_ORDER: string[] = [
     "arcTv",
     "cmd",
     "notepad",
+    "roadmap",
+    "arcSolitaire",
+    "arcSnake",
     "recycleBin",
 ];

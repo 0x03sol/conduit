@@ -51,8 +51,13 @@ function VideoFrame({ src, title }: { src: string; title: string }) {
 export function ArcTvApp() {
     // Snapshot autoplay flag once at mount; clear it immediately so a
     // manual reopen later doesn't autoplay.
+    // NOTE: unmuted autoplay. Browser autoplay policies (Chrome/Safari)
+    // block sound-on autoplay unless the page already has a user gesture
+    // or sufficient media-engagement score. On a cold first load the
+    // video may start muted anyway and the user taps the Wistia unmute
+    // control; on revisits with engagement it plays with sound.
     const [autoplayParams] = useState(() =>
-        useDesktop.getState().arcTvAutoplay ? "&autoPlay=true&muted=true" : "",
+        useDesktop.getState().arcTvAutoplay ? "&autoPlay=true&muted=false" : "",
     );
     const setArcTvAutoplay = useDesktop((s) => s.setArcTvAutoplay);
     useEffect(() => {

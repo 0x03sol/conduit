@@ -12,7 +12,6 @@ A settlement is one batch:
 REQUIRES
   source-chain wallet with USDC and native gas
   Arc testnet in wallet  (chainId 5042002)
-  NEXT_PUBLIC_PRIVY_APP_ID in dashboard/.env.local
 
 
 A. SIGN IN
@@ -116,15 +115,6 @@ DEBUGGING
    hook didn't fire       check destinationCaller and hookData
    recipient missing      check ERC20.balanceOf in tx traces
    permit reverted        check sig domain matches PermitTransferFrom
-
-
-ENV  (dashboard/.env.local)
-   NEXT_PUBLIC_PRIVY_APP_ID
-   NEXT_PUBLIC_ARC_RPC_URL
-   NEXT_PUBLIC_PONDER_URL
-   NEXT_PUBLIC_BATCH_REGISTRY
-   NEXT_PUBLIC_BATCH_ROUTER
-   NEXT_PUBLIC_CCTP_HOOK_RECEIVER
 
 
 REPO

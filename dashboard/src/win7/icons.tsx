@@ -14,6 +14,9 @@ const ICONS = {
     arcTv:      "extracted/Windows Media Player/player",     // classic WMP 12 stack icon
     cmd:        "extracted/Default Programs/cmd_IDI_APPICON", // native Win7 Command Prompt
     notepad:    "extracted/Default Programs/notepad_2",       // native Notepad
+    roadmap:    "extracted/Windows Journal/Journal_127",      // notebook — roadmap
+    arcSolitaire: "extracted/Games/Solitaire_108",           // classic cards
+    arcSnake:   "extracted/Games/MineSweeper_111",           // games-suite icon for the arcade game
     recycleBin: "extracted/Shell32.dll/imageres_54",       // empty recycle bin
     wallet:     "extracted/Action Center/Action Center_1", // security shield
     home:       "extracted/Special Folders/imageres_123",  // user home

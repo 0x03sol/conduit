@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { runCommand, CLEAR, ANIM_ARC, ARC_FRAMES, ARC_CAPTION } from "./cmdEngine";
+
 /**
  * CommandPromptApp
  *
@@ -17,7 +19,7 @@ import { useEffect, useRef, useState } from "react";
  * window restarts the playback.
  */
 
-const PROMPT = "conduit@v2202604351739451323:~$";
+const PROMPT = "conduit@v1296847503219478650:~$";
 const COMMAND = "cat README.txt";
 
 const README = `conduit/dashboard
@@ -69,12 +71,7 @@ LAYOUT
   contracts/       foundry project
   dashboard/       this app
   indexer/         ponder
-  relayer/         iris poller + receiver
-
-LICENSE
-  win7 chrome      7.css (MIT) by khang-nd
-  icons            icons8 officel set
-  sounds           Web Audio synthesized in-browser`;
+  relayer/         iris poller + receiver`;
 
 const README_LINES = README.split("\n");
 
@@ -108,6 +105,73 @@ export function CommandPromptApp() {
     const [typed, setTyped] = useState("");
     const [outputCount, setOutputCount] = useState(0);
     const scrollRef = useRef<HTMLDivElement | null>(null);
+    // Interactive session: history is a flat list of printed lines once
+    // the README dump finishes and the prompt goes live.
+    const [history, setHistory] = useState<string[]>([]);
+    const [input, setInput] = useState("");
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    // Typewriter: lines still being typed out, one char at a time.
+    const [pending, setPending] = useState<string[] | null>(null);
+    const [pLine, setPLine] = useState(0);
+    const [pChars, setPChars] = useState(0);
+
+    // Arc cat/USDC animation: frame index while playing, or -1 when idle.
+    const [animFrame, setAnimFrame] = useState(-1);
+
+    const busy = pending !== null || animFrame >= 0;
+
+    const submit = (raw: string) => {
+        if (busy) return;
+        const result = runCommand(raw, PROMPT);
+        if (result[0] === CLEAR) {
+            setHistory([]);
+            setInput("");
+            return;
+        }
+        const [echo, ...rest] = result;
+        setHistory((h) => [...h, echo!]);
+        setInput("");
+        if (rest[0] === ANIM_ARC) {
+            setAnimFrame(0); // kick off the cat animation
+        } else if (rest.length > 0) {
+            setPending(rest);
+            setPLine(0);
+            setPChars(0);
+        }
+    };
+
+    // Typewriter loop: reveal the current pending line char-by-char, then
+    // commit it to history and advance. ~14ms/char reads as live typing.
+    useEffect(() => {
+        if (pending === null) return;
+        if (pLine >= pending.length) {
+            setPending(null);
+            return;
+        }
+        const cur = pending[pLine]!;
+        if (pChars >= cur.length) {
+            setHistory((h) => [...h, cur]);
+            setPLine((l) => l + 1);
+            setPChars(0);
+            return;
+        }
+        const t = setTimeout(() => setPChars((c) => c + 1), 14);
+        return () => clearTimeout(t);
+    }, [pending, pLine, pChars]);
+
+    // Arc animation loop: cycle ARC_FRAMES ~3 times, then print the caption.
+    useEffect(() => {
+        if (animFrame < 0) return;
+        const TOTAL = ARC_FRAMES.length * 3; // 3 loops
+        if (animFrame >= TOTAL) {
+            setHistory((h) => [...h, ...ARC_CAPTION]);
+            setAnimFrame(-1);
+            return;
+        }
+        const t = setTimeout(() => setAnimFrame((f) => f + 1), 250);
+        return () => clearTimeout(t);
+    }, [animFrame]);
 
     // Phase 1: type out `cat README.txt` char-by-char
     useEffect(() => {
@@ -138,11 +202,18 @@ export function CommandPromptApp() {
     useEffect(() => {
         const el = scrollRef.current;
         if (el) el.scrollTop = el.scrollHeight;
-    }, [typed, outputCount, phase]);
+    }, [typed, outputCount, phase, history, input, pending, pChars, animFrame]);
+
+    // Focus the input as soon as the session goes interactive (and after
+    // each reply/animation finishes, so the user can keep typing).
+    useEffect(() => {
+        if (phase === "idle" && !busy) inputRef.current?.focus();
+    }, [phase, busy]);
 
     return (
         <div
             ref={scrollRef}
+            onClick={() => { if (phase === "idle") inputRef.current?.focus(); }}
             style={{
                 height: "100%",
                 background: "#000000",
@@ -152,7 +223,8 @@ export function CommandPromptApp() {
                 lineHeight: 1.35,
                 padding: "8px 10px",
                 overflowY: "auto",
-                whiteSpace: "pre",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
                 textShadow: "0 0 4px rgba(51, 255, 102, 0.45)",
                 boxSizing: "border-box",
             }}
@@ -171,12 +243,64 @@ export function CommandPromptApp() {
                     <div key={i}>{line.length === 0 ? "\u00a0" : line}</div>
                 ))}
 
-            {/* Idle prompt with persistent blinking cursor. */}
+            {/* Interactive session: printed history + a live input line. */}
             {phase === "idle" && (
-                <div>
-                    <span style={{ color: "#7af0a4" }}>{PROMPT}</span>{" "}
-                    <Cursor />
-                </div>
+                <>
+                    <div style={{ marginTop: "4px", color: "rgba(120,240,164,0.7)" }}>
+                        {"\u00a0"}
+                    </div>
+                    <div style={{ color: "rgba(120,240,164,0.85)" }}>
+                        type 'help' or just talk. e.g. hi, flow, contracts, settle, arc
+                    </div>
+                    {history.map((line, i) => (
+                        <div key={i}>{line.length === 0 ? "\u00a0" : line}</div>
+                    ))}
+
+                    {/* Arc cat/USDC animation frame (swapped in place). */}
+                    {animFrame >= 0 &&
+                        ARC_FRAMES[animFrame % ARC_FRAMES.length]!.map((l, i) => (
+                            <div key={`anim-${i}`} style={{ color: "#9af7bf" }}>{l.length === 0 ? "\u00a0" : l}</div>
+                        ))}
+
+                    {/* Typewriter: the line currently being typed out + cursor. */}
+                    {pending !== null && pLine < pending.length && (
+                        <div>
+                            {pending[pLine]!.slice(0, pChars)}
+                            <Cursor />
+                        </div>
+                    )}
+
+                    {/* Live input line — only when nothing is animating/typing. */}
+                    {!busy && (
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                            <span style={{ color: "#7af0a4" }}>{PROMPT}</span>
+                            <span>{"\u00a0"}</span>
+                            <input
+                                ref={inputRef}
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") submit(input);
+                                }}
+                                spellCheck={false}
+                                autoComplete="off"
+                                aria-label="Conduit terminal input"
+                                style={{
+                                    flex: 1,
+                                    background: "transparent",
+                                    border: "none",
+                                    outline: "none",
+                                    color: "#33ff66",
+                                    fontFamily: "inherit",
+                                    fontSize: "inherit",
+                                    textShadow: "inherit",
+                                    caretColor: "#33ff66",
+                                    padding: 0,
+                                }}
+                            />
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
