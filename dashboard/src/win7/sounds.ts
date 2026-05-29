@@ -1,7 +1,6 @@
 "use client";
 
 let _ctx: AudioContext | null = null;
-let _muted = false;
 
 function ctx(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -14,9 +13,6 @@ function ctx(): AudioContext | null {
     return _ctx;
 }
 
-export function setMuted(v: boolean): void { _muted = v; }
-export function isMuted(): boolean { return _muted; }
-
 interface ToneOpts {
     freq: number;
     duration: number;
@@ -28,7 +24,6 @@ interface ToneOpts {
 }
 
 function tone(o: ToneOpts): void {
-    if (_muted) return;
     const c = ctx();
     if (!c) return;
     const t0 = c.currentTime + (o.delay ?? 0);
@@ -49,14 +44,6 @@ function tone(o: ToneOpts): void {
 export function ding(): void {
     tone({ freq: 988, duration: 0.06, type: "sine", gain: 0.08 });
     tone({ freq: 1318, duration: 0.10, type: "sine", gain: 0.06, delay: 0.04 });
-}
-
-/** Win7-flavoured ascending chord — boot / login. */
-export function chime(): void {
-    tone({ freq: 440, duration: 0.20, type: "sine", gain: 0.07 });
-    tone({ freq: 554, duration: 0.20, type: "sine", gain: 0.07, delay: 0.10 });
-    tone({ freq: 659, duration: 0.20, type: "sine", gain: 0.07, delay: 0.20 });
-    tone({ freq: 880, duration: 0.30, type: "sine", gain: 0.10, delay: 0.30 });
 }
 
 /** Three-note descending — error chord. */

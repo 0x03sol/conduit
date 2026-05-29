@@ -23,8 +23,10 @@ export function StartMenu() {
 
     return (
         <>
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions */}
             <div
                 onClick={close}
+                aria-hidden
                 style={{ position: "fixed", inset: 0, zIndex: 9000, background: "transparent" }}
             />
             <div
@@ -67,7 +69,7 @@ export function StartMenu() {
                     {/* Left Column: Programs List */}
                     <div style={{ flex: 1, background: "#ffffff", display: "flex", flexDirection: "column", padding: "4px 6px" }}>
                         <ul className="w7-start-menu-list" style={{ flex: 1, margin: 0, padding: 0, overflowY: "auto" }}>
-                            {["sender", "operator", "recipient", "readme"].map((id) => {
+                            {["sender", "operator", "recipient", "cmd"].map((id) => {
                                 const app = APPS[id];
                                 if (!app) return null;
                                 return (
@@ -98,6 +100,7 @@ export function StartMenu() {
                                 <input 
                                     type="text" 
                                     placeholder="Search programs and files" 
+                                    aria-label="Search programs and files"
                                     disabled
                                     style={{
                                         width: "100%",
@@ -207,6 +210,7 @@ function SignInArea({ onAfterAction }: { onAfterAction: () => void }) {
     if (!authenticated) {
         return (
             <button
+                type="button"
                 onClick={() => { login(); onAfterAction(); }}
                 style={{ width: "100%" }}
             >
@@ -219,7 +223,7 @@ function SignInArea({ onAfterAction }: { onAfterAction: () => void }) {
     return (
         <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center", gap: "8px" }}>
             <span className="w7-mono" style={{ fontSize: "11px" }}>{label}</span>
-            <button onClick={() => { logout(); onAfterAction(); }}>Sign out</button>
+            <button type="button" onClick={() => { logout(); onAfterAction(); }}>Sign out</button>
         </div>
     );
 }

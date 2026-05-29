@@ -4,14 +4,16 @@
  * in the README).
  */
 
-export const ICONS = {
+// Internal map — exposed via IconKey type. Used only by the Icon component below.
+const ICONS = {
     myComputer: "extracted/Shell32.dll/imageres_109",
     sender:     "extracted/Standard Folders/imageres_166", // shared folder representing cross-chain transfer/sender
     operator:   "extracted/Shell32.dll/shell32_16",       // display monitor representing settlement feed/operator
     recipient:  "extracted/Standard Folders/imageres_9",   // inbox/mail representing incoming payments/recipient
     arcscan:    "extracted/Internet Explorer/iexplore_32528", // native Internet Explorer
     arcTv:      "extracted/Windows Media Player/player",     // classic WMP 12 stack icon
-    readme:     "extracted/Default Programs/notepad_2",    // native Notepad
+    cmd:        "extracted/Default Programs/cmd_IDI_APPICON", // native Win7 Command Prompt
+    notepad:    "extracted/Default Programs/notepad_2",       // native Notepad
     recycleBin: "extracted/Shell32.dll/imageres_54",       // empty recycle bin
     wallet:     "extracted/Action Center/Action Center_1", // security shield
     home:       "extracted/Special Folders/imageres_123",  // user home

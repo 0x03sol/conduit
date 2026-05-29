@@ -1,83 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
-import * as THREE from "three";
-
 import { MeteorShower } from "./MeteorShower";
 
-// Dynamically import react-globe.gl with SSR disabled
-const Globe = dynamic(() => import("react-globe.gl"), {
-    ssr: false,
-    loading: () => <div style={{ position: "absolute", inset: 0, background: "#000000" }} />,
-}) as any;
-
+/**
+ * EarthBackground
+ *
+ * Flat-image desktop wallpaper: a cinematic Earth-from-orbit photograph
+ * (stars + Milky Way + atmospheric blue limb baked in) covers the entire
+ * viewport. The MeteorShower canvas floats above so live Arc-testnet tx
+ * streaks still rain across the upper-half sky. A small Arc Λ emblem
+ * floats in the upper-center sky with a soft glow and a 4s ease-in-out
+ * vertical bob.
+ *
+ * Trade-offs vs the previous WebGL globe:
+ *   • Pro: zero WebGL cost, instant first paint, sharp text rendering on
+ *     low-end devices, cinematic AI-art aesthetic.
+ *   • Con: no live rotation. The Earth is a frozen camera angle.
+ *
+ * The observatory readout (ArcReadout), Win7 taskbar, and any open
+ * windows are layered over this background by Desktop.tsx (z >= 100).
+ */
 export default function EarthBackground() {
-    const globeRef = useRef<any>(null);
-    const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-    const sunLightAdded = useRef(false);
-
-    useEffect(() => {
-        // Set dimensions once we are client-side
-        setDimensions({
-            width: window.innerWidth,
-            height: window.innerHeight,
-        });
-
-        const handleResize = () => {
-            setDimensions({
-                width: window.innerWidth,
-                height: window.innerHeight,
-            });
-        };
-
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    useEffect(() => {
-        if (globeRef.current) {
-            const controls = globeRef.current.controls();
-            if (controls) {
-                controls.autoRotate = true;
-                controls.autoRotateSpeed = 0.25;
-                controls.enableZoom = false;
-                controls.enablePan = false;
-            }
-            // High-orbit altitude — full Earth disk visible inside the canvas,
-            // so the limb (Earth's edge against space) is renderable. We then
-            // crop with CSS positioning to show only the upper horizon arc.
-            globeRef.current.pointOfView({ lat: 20, lng: 10, altitude: 1.8 });
-
-            // Custom lighting: dim ambient + bright directional "sun" from
-            // the bottom-right. Only attach once even if the effect re-fires.
-            if (!sunLightAdded.current) {
-                const scene = globeRef.current.scene();
-                if (scene) {
-                    // Dim the existing ambient light(s) to 0.3
-                    scene.traverse((obj: any) => {
-                        if (obj?.isAmbientLight) {
-                            obj.intensity = 0.3;
-                        }
-                    });
-
-                    // Add a strong sun directional light from the bottom-right
-                    const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
-                    sunLight.position.set(2, -1, 1);
-                    sunLight.userData.isCustomSun = true;
-                    scene.add(sunLight);
-
-                    sunLightAdded.current = true;
-                }
-            }
-        }
-    }, [globeRef.current]);
-
-    // Square canvas at 2× viewport width — keeps the sphere round and makes
-    // the rendered globe massive (so the curvature looks gentle, like the
-    // reference photo from low orbit).
-    const globeSize = dimensions.width * 2;
-
     return (
         <div
             style={{
@@ -91,78 +34,49 @@ export default function EarthBackground() {
                 pointerEvents: "none",
             }}
         >
-            {/* Space background — warm nebula tint in the upper-right plus
-                the 300-dot starfield from /stars.svg.
-                Lifted above the globe canvas (z-index 2) because the globe's
-                atmosphere shader paints faint blue alpha across the upper
-                viewport which would otherwise mask the dim 1px stars.
-                Masked to the top 60% so stars don't sprinkle onto the Earth. */}
+            {/* Wallpaper layer — Earth-from-orbit photograph filling the
+                viewport. background-size: cover preserves aspect ratio and
+                slightly crops left/right (or top/bottom on ultrawide) to
+                fully fill the screen. */}
             <div
                 style={{
                     position: "absolute",
                     inset: 0,
-                    background:
-                        "radial-gradient(ellipse at 60% 20%, rgba(80,40,10,0.3) 0%, transparent 60%), " +
-                        "url('/stars.svg')",
-                    backgroundSize: "auto, cover",
-                    backgroundRepeat: "no-repeat, no-repeat",
-                    pointerEvents: "none",
-                    zIndex: 2,
-                    maskImage: "linear-gradient(to bottom, black 0%, black 55%, transparent 65%)",
-                    WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 55%, transparent 65%)",
+                    backgroundImage: "url('/wallpaper.jpg')",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center center",
+                    backgroundRepeat: "no-repeat",
+                    zIndex: 1,
                 }}
             />
 
-            {/* Massive globe — canvas is 2× viewport width with the disk
-                anchored toward its middle. Positioning the canvas with a
-                positive top value pushes it down so the disk's upper limb
-                arc lands at viewport mid-height, leaving black starry space
-                above for the Arc wordmark. */}
+            {/* Arc brand mark — inline SVG Λ + "Arc" wordmark in pure
+                white, with a unified soft glow on the parent (drop-shadow
+                filter spans both the SVG and the text glyphs). Sits in
+                the gap between the two top windows after the boot
+                cascade lands, so it stays visible even with all windows
+                open.
+
+                The 4s ease-in-out alternate vertical bob (defined in
+                globals.css as @keyframes arc-emblem-float) keeps the
+                "floating in zero-G" feel from the previous img-based
+                emblem. */}
             <div
+                aria-hidden
                 style={{
                     position: "absolute",
-                    width: `${globeSize}px`,
-                    height: `${globeSize}px`,
+                    top: "55px",
                     left: "50%",
-                    top: "-20%",
                     transform: "translateX(-50%)",
-                    pointerEvents: "none",
-                    zIndex: 1,
-                }}
-            >
-                <Globe
-                    ref={globeRef}
-                    width={globeSize}
-                    height={globeSize}
-                    globeImageUrl="/earth-day.jpg"
-                    bumpImageUrl="/earth-bump.png"
-                    nightImageUrl="/earth-night.jpg"
-                    backgroundImageUrl="" // black space; stars are drawn above
-                    showAtmosphere={true}
-                    atmosphereColor="#3a8fff"
-                    atmosphereAltitude={0.18}
-                />
-            </div>
-
-            {/* Live tx meteor shower — one streak per real Arc-testnet
-                transaction, masked above the horizon so it never paints
-                on the Earth surface. */}
-            <MeteorShower />
-
-            {/* Brand overlay — clean white Arc arch (Λ) + "Arc" wordmark in
-                the black sky above the horizon. No spiral, no circle. */}
-            <div
-                style={{
-                    position: "absolute",
-                    top: "30%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
+                    zIndex: 3,
                     display: "flex",
                     alignItems: "center",
-                    gap: "20px",
-                    zIndex: 4,
+                    gap: "18px",
                     pointerEvents: "none",
                     userSelect: "none",
+                    filter: "drop-shadow(0 0 18px rgba(255, 255, 255, 0.45))",
+                    animation:
+                        "arc-emblem-float 4s ease-in-out infinite alternate",
                 }}
             >
                 <svg
@@ -171,7 +85,6 @@ export default function EarthBackground() {
                     viewBox="0 0 100 100"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    style={{ filter: "drop-shadow(0 0 18px rgba(255, 255, 255, 0.45))" }}
                 >
                     {/* Λ — Arc arch: two thick legs joined by a rounded apex */}
                     <path
@@ -185,14 +98,18 @@ export default function EarthBackground() {
                         fontSize: "72px",
                         fontWeight: 500,
                         letterSpacing: "-1.5px",
-                        fontFamily: "Segoe UI, sans-serif",
-                        textShadow: "0 0 18px rgba(255, 255, 255, 0.4)",
+                        fontFamily: '"Segoe UI", sans-serif',
                         lineHeight: 1,
                     }}
                 >
                     Arc
                 </span>
             </div>
+
+            {/* Live tx meteor shower — one streak per real Arc-testnet
+                transaction, masked above the horizon (handled inside
+                MeteorShower) so it never paints on the Earth surface. */}
+            <MeteorShower />
         </div>
     );
 }

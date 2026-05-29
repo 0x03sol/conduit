@@ -32,8 +32,8 @@ export function Win7Window({ id, icon, children }: WindowProps) {
         <Rnd
             size={{ width: win.bounds.width, height: win.bounds.height }}
             position={{ x: win.bounds.x, y: win.bounds.y }}
-            minWidth={300}
-            minHeight={180}
+            minWidth={240}
+            minHeight={140}
             bounds="parent"
             dragHandleClassName="title-bar"
             disableDragging={win.maximized}

@@ -145,13 +145,18 @@ export function SenderApp() {
             {address && !onArc && (
                 <div role="tooltip" style={{ position: "static", display: "flex", gap: "8px", alignItems: "center" }}>
                     <span style={{ flex: 1 }}>Connected to chain {chainId}; Conduit lives on Arc Testnet (5042002).</span>
-                    <button onClick={() => switchChain({ chainId: arcTestnet.id })}>Switch to Arc</button>
+                    <button type="button" onClick={() => switchChain({ chainId: arcTestnet.id })}>Switch to Arc</button>
                 </div>
             )}
 
             <fieldset>
                 <legend>CSV file</legend>
-                <input type="file" accept=".csv,text/csv" onChange={onFile} />
+                <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    aria-label="Upload recipients CSV file"
+                    onChange={onFile}
+                />
             </fieldset>
 
             {rows.length > 0 && (
@@ -168,7 +173,7 @@ export function SenderApp() {
                         </thead>
                         <tbody>
                             {rows.map((r, i) => (
-                                <tr key={i}>
+                                <tr key={`${r.wallet || "row"}-${i}`}>
                                     <td className="w7-mono">{r.wallet || "—"}</td>
                                     <td style={{ textAlign: "right" }}>{r.rawAmount}</td>
                                     <td>{r.currencySymbol}</td>
@@ -211,7 +216,7 @@ export function SenderApp() {
                     )}
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "flex-end" }}>
                         {needsApproval && address && onArc && (
-                            <button onClick={approve} disabled={isPending || txPending}>
+                            <button type="button" onClick={approve} disabled={isPending || txPending}>
                                 {isPending || txPending ? "Submitting…" : `Approve ${formatAmount(fee as bigint, 6, "USDC")}`}
                             </button>
                         )}
@@ -238,7 +243,7 @@ export function SenderApp() {
                                     Confirmed.{" "}
                                     {needsApproval ? "Approval landed." : "Batch registered."}
                                     {needsApproval && (
-                                        <button onClick={() => refetchAllowance()} style={{ marginLeft: "6px" }}>refresh</button>
+                                        <button type="button" onClick={() => refetchAllowance()} style={{ marginLeft: "6px" }}>refresh</button>
                                     )}
                                 </p>
                             )}

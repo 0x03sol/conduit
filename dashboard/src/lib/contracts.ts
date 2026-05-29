@@ -4,8 +4,8 @@ const env = (k: string, fallback: string): Address =>
     (process.env[k] ?? fallback) as Address;
 
 export const ADDRESSES = {
-    batchRegistry: env("NEXT_PUBLIC_BATCH_REGISTRY", "0x823b34D7FBa61628cE3e665F86f715e823657A17"),
-    batchRouter: env("NEXT_PUBLIC_BATCH_ROUTER", "0x1a8F8B0aA5fe50c3c9B48E5aCA56aBe2CE52452f"),
+    batchRegistry: env("NEXT_PUBLIC_BATCH_REGISTRY", "0x34705cF46Ddf9f3cE53f5492B6376678BE62F0fc"),
+    batchRouter: env("NEXT_PUBLIC_BATCH_ROUTER", "0x6eD720FDF5c28cF8895A8049Fe13AF1384d82d20"),
     usdc: env("NEXT_PUBLIC_USDC_ADDRESS", "0x3600000000000000000000000000000000000000"),
     eurc: env("NEXT_PUBLIC_EURC_ADDRESS", "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"),
 } as const;

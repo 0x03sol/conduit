@@ -52,6 +52,7 @@ export function RecipientApp() {
                 <input
                     id="wallet-search"
                     type="text"
+                    aria-label="Recipient wallet address"
                     value={walletInput}
                     onChange={(e) => setWalletInput(e.target.value)}
                     placeholder="0x… recipient address"

@@ -5,6 +5,8 @@ import { useAccount } from "wagmi";
 
 import { arcTestnet } from "@/lib/chains";
 import { useArcLive } from "@/components/useArcLive";
+import { HowItWorksButton } from "@/components/HowItWorksButton";
+import { TraySignIn } from "@/components/TraySignIn";
 
 /* ------------------------------------------------------------------ */
 /* Live Arc chain stats — polled every 15 s from Arcscan public API.  */
@@ -154,6 +156,11 @@ export function SystemTray() {
 
     return (
         <div className="w7-tray" title={address ? `Connected: ${address}` : "Not connected"}>
+            {/* Tray quick-launch entries — order: Sign in → How It Works
+                → block → gwei → txs → tx/s → signal → clock. */}
+            <TraySignIn />
+            <HowItWorksButton />
+
             {/* Live Arc chain stats strip — block / gas / total tx count */}
             <div
                 className="w7-arc-stats"

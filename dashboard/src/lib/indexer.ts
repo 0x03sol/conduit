@@ -4,7 +4,7 @@
  */
 const PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL ?? "http://localhost:42069";
 
-export async function indexerFetch<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+async function indexerFetch<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
     const res = await fetch(`${PONDER_URL}/graphql`, {
         method: "POST",
         headers: { "content-type": "application/json" },

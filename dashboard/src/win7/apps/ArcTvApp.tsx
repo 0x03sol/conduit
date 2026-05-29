@@ -1,17 +1,30 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+import { useDesktop } from "../store";
+
 /**
  * Arc TV — Media Player
  *
- * Win7-styled "media player" window. Embeds Wistia videos via plain
- * iframes; the Morpho × Arc page on community.arc.io ships
- * `X-Frame-Options: SAMEORIGIN` + `frame-ancestors 'self'` so we cannot
- * iframe that page directly — instead we embed the underlying Wistia
- * video that page uses (hashedId `afz5db76x0`), which is publicly
- * embeddable.
+ * Win7-styled "media player" window. The community.arc.io page that
+ * hosts this video ships `X-Frame-Options: SAMEORIGIN` + a strict
+ * `frame-ancestors 'self'` CSP, so we cannot iframe the page itself —
+ * instead we embed the underlying Wistia video, which is publicly
+ * embeddable, and link out to the community page for full context.
+ *
+ * Autoplay: when BootSequence sets `arcTvAutoplay = true` in the store
+ * just before opening this window, we append `&autoPlay=true&muted=true`
+ * to the Wistia URL on first mount (browsers require muted for autoplay).
+ * The flag is one-shot — cleared after read so manual reopens don't
+ * autoplay.
  */
 const WISTIA_BASE = "https://fast.wistia.net/embed/iframe";
-const VIDEO_ID = "afz5db76x0";
+const VIDEO_ID = "83h8oivd8o";
+const VIDEO_TITLE = "VC Pitch Arc Studio";
+const VIDEO_SUBTITLE = "Circle Developer Grants — From Idea to Funded";
+const PAGE_URL =
+    "https://community.arc.io/home/videos/circle-developer-grants-from-idea-to-funded-2026-05-14?wvideo=83h8oivd8o";
 
 function VideoFrame({ src, title }: { src: string; title: string }) {
     return (
@@ -36,6 +49,16 @@ function VideoFrame({ src, title }: { src: string; title: string }) {
 }
 
 export function ArcTvApp() {
+    // Snapshot autoplay flag once at mount; clear it immediately so a
+    // manual reopen later doesn't autoplay.
+    const [autoplayParams] = useState(() =>
+        useDesktop.getState().arcTvAutoplay ? "&autoPlay=true&muted=true" : "",
+    );
+    const setArcTvAutoplay = useDesktop((s) => s.setArcTvAutoplay);
+    useEffect(() => {
+        if (autoplayParams) setArcTvAutoplay(false);
+    }, [autoplayParams, setArcTvAutoplay]);
+
     return (
         <div
             style={{
@@ -73,59 +96,54 @@ export function ArcTvApp() {
                     padding: "10px 12px 14px",
                 }}
             >
-                {/* ------- Video 1 ------- */}
-                <div style={{ marginBottom: "16px" }}>
-                    <VideoFrame
-                        src={`${WISTIA_BASE}/${VIDEO_ID}`}
-                        title="Arc TV — Featured"
-                    />
-                </div>
-
-                {/* ------- Video 2: Morpho × Arc ------- */}
-                <div style={{ borderTop: "1px solid #c4d6ea", paddingTop: "12px" }}>
+                <div>
                     <h2
                         style={{
                             fontSize: "13px",
                             fontWeight: 600,
-                            margin: "0 0 6px",
+                            margin: "0 0 2px",
                             color: "#1e395b",
                             fontFamily: "inherit",
                         }}
                     >
-                        Morpho × Arc — Merlin Egalite
+                        {VIDEO_TITLE}
                     </h2>
-
-                    <VideoFrame
-                        src={`${WISTIA_BASE}/${VIDEO_ID}?videoFoam=true`}
-                        title="Morpho × Arc — Merlin Egalite"
-                    />
-
-                    {/* Speaker line */}
                     <div
                         style={{
-                            marginTop: "8px",
                             fontSize: "11px",
-                            color: "#000",
-                            fontWeight: 600,
+                            color: "#777",
+                            margin: "0 0 8px",
                         }}
                     >
-                        Speaker: Merlin Egalite,{" "}
-                        <span style={{ fontWeight: 400 }}>Co-Founder of Morpho</span>
+                        {VIDEO_SUBTITLE}
                     </div>
 
-                    {/* Grey description */}
+                    <VideoFrame
+                        src={`${WISTIA_BASE}/${VIDEO_ID}?videoFoam=true${autoplayParams}`}
+                        title={VIDEO_TITLE}
+                    />
+
                     <p
                         style={{
-                            marginTop: "6px",
+                            marginTop: "10px",
                             marginBottom: 0,
                             fontSize: "11px",
                             lineHeight: 1.4,
-                            color: "#777",
+                            color: "#000",
                             fontFamily: "inherit",
                         }}
                     >
-                        Morpho is building the universal lending protocol where anyone can
-                        build, earn, or borrow on top of it. Soon live on Arc.
+                        <a
+                            href={PAGE_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                color: "#1e6bd6",
+                                textDecoration: "underline",
+                            }}
+                        >
+                            Watch on community.arc.io →
+                        </a>
                     </p>
                 </div>
             </div>
@@ -144,7 +162,7 @@ export function ArcTvApp() {
                     justifyContent: "space-between",
                 }}
             >
-                <span>Now playing: Arc TV</span>
+                <span>Now playing: {VIDEO_TITLE}</span>
                 <span>Wistia · {VIDEO_ID}</span>
             </div>
         </div>

@@ -7,9 +7,9 @@ import { Icon } from "../icons";
 
 const PRESETS = [
     { label: "Arc Testnet Explorer (home)",  href: "https://testnet.arcscan.app/" },
-    { label: "BatchRegistry contract",       href: "https://testnet.arcscan.app/address/0x823b34D7FBa61628cE3e665F86f715e823657A17" },
-    { label: "BatchRouter contract",         href: "https://testnet.arcscan.app/address/0x1a8F8B0aA5fe50c3c9B48E5aCA56aBe2CE52452f" },
-    { label: "CCTPHookReceiver contract",    href: "https://testnet.arcscan.app/address/0xe495183df2035aB5882bC2957ec0f94B2F03e22b" },
+    { label: "BatchRegistry contract",       href: "https://testnet.arcscan.app/address/0x34705cF46Ddf9f3cE53f5492B6376678BE62F0fc" },
+    { label: "BatchRouter contract",         href: "https://testnet.arcscan.app/address/0x6eD720FDF5c28cF8895A8049Fe13AF1384d82d20" },
+    { label: "CCTPHookReceiver contract",    href: "https://testnet.arcscan.app/address/0xAe225c9F39664Ff01D11dA9cD29452a2bE0E8FE3" },
     { label: "Last settled batch tx",        href: "https://testnet.arcscan.app/tx/0xfc746072442e2" },
 ];
 
@@ -41,6 +41,7 @@ export function ArcscanApp() {
                 <span>Address:</span>
                 <input
                     type="text"
+                    aria-label="URL address bar"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     className="w7-mono"

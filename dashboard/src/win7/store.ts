@@ -29,6 +29,8 @@ interface DesktopStore {
     startMenuOpen: boolean;
     /** Deep-link target consumed by ArcscanApp on next open / focus. */
     arcscanTargetUrl: string | null;
+    /** One-shot flag set by BootSequence to make ArcTvApp autoplay on next mount. */
+    arcTvAutoplay: boolean;
 
     openApp: (appId: string, opts?: { title?: string; bounds?: Partial<WindowBounds> }) => void;
     close: (id: string) => void;
@@ -40,6 +42,7 @@ interface DesktopStore {
     toggleStartMenu: () => void;
     closeStartMenu: () => void;
     setArcscanTarget: (url: string | null) => void;
+    setArcTvAutoplay: (v: boolean) => void;
 }
 
 const CASCADE = 28;
@@ -54,6 +57,7 @@ export const useDesktop = create<DesktopStore>((set) => ({
     topZ: 100,
     startMenuOpen: false,
     arcscanTargetUrl: null,
+    arcTvAutoplay: false,
 
     openApp: (appId, opts) => {
         let opened = false;
@@ -155,4 +159,5 @@ export const useDesktop = create<DesktopStore>((set) => ({
     toggleStartMenu: () => set((s) => ({ startMenuOpen: !s.startMenuOpen })),
     closeStartMenu: () => set({ startMenuOpen: false }),
     setArcscanTarget: (url) => set({ arcscanTargetUrl: url }),
+    setArcTvAutoplay: (v) => set({ arcTvAutoplay: v }),
 }));

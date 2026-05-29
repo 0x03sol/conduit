@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { KeyboardEvent } from "react";
 
 import { useDesktop } from "./store";
 import { Win7Window } from "./Window";
@@ -11,6 +12,7 @@ import { APPS, DESKTOP_ICON_ORDER } from "./apps/registry";
 import EarthBackground from "../components/EarthBackground";
 import { ArcReadout } from "../components/ArcReadout";
 import { OnboardingTour } from "../components/OnboardingTour";
+import { BootSequence } from "./BootSequence";
 
 interface DesktopProps {
     autoOpen?: string;
@@ -29,17 +31,28 @@ export function Desktop({ autoOpen }: DesktopProps) {
                 bounds: APPS[autoOpen]!.defaultSize,
             });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [autoOpen]);
+    }, [autoOpen, openApp]);
 
     const handleBackgroundClick = () => {
         closeStartMenu();
         setSelectedId(null);
     };
 
+    const handleBackgroundKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+        // Escape from anywhere on the desktop closes the start menu and
+        // clears the selected icon — same behaviour as a background click,
+        // but reachable for keyboard users. Other keys bubble normally so
+        // typing inside windows is unaffected.
+        if (e.key === "Escape") {
+            handleBackgroundClick();
+        }
+    };
+
     return (
         <div
             onClick={handleBackgroundClick}
+            onKeyDown={handleBackgroundKeyDown}
+            tabIndex={-1}
             style={{
                 position: "fixed",
                 inset: 0,
@@ -101,6 +114,7 @@ export function Desktop({ autoOpen }: DesktopProps) {
             <StartMenu />
             <ArcReadout />
             <OnboardingTour />
+            <BootSequence enabled={!autoOpen} />
         </div>
     );
 }
